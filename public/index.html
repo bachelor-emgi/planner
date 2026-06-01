@@ -3,7 +3,8 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Digital Planner</title>
 
   <!-- Tailwind CSS -->
@@ -67,6 +68,29 @@
         border: none !important;
         margin: 0 !important;
         padding: 0 !important;
+      }
+    }
+
+    @supports (padding: max(0px)) {
+      body {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+    }
+
+    /* Vypnutie media queries pre print a preview */
+    @media (min-width: 1024px) {
+      .lg\:grid-cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    /* Na iPade vždy jedno stĺpec v settings */
+    @media (max-width: 1024px) {
+      .grid-cols-1.lg\:grid-cols-2 {
+        grid-template-columns: 1fr !important;
       }
     }
   </style>
@@ -208,7 +232,7 @@
       const uTC = (k, v) => setConfig(p => ({ ...p, trackerCounts: { ...p.trackerCounts, [k]: parseInt(v) || 0 } }));
 
       return (
-        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 pb-20 print:hidden">
+        <div className="w-full max-w-6xl grid gap-8 pb-20 print:hidden" style={{gridTemplateColumns: '1fr'}}>
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <h2 className="text-xl font-bold mb-4">{ui.secLayout}</h2>
@@ -435,8 +459,8 @@
         <div className={`flex items-center justify-end mb-4`}>
           <a href="#tracker-page"
             className={`h-12 flex items-center justify-center transition-all rounded-l-xl ${aI === 'tracker'
-                ? 'w-[45px] bg-slate-700 text-white font-bold z-20 shadow-md'
-                : 'w-[35px] bg-slate-100 text-slate-500 border border-r-0 border-slate-200 hover:w-[40px]'
+              ? 'w-[45px] bg-slate-700 text-white font-bold z-20 shadow-md'
+              : 'w-[35px] bg-slate-100 text-slate-500 border border-r-0 border-slate-200 hover:w-[40px]'
               }`}
             style={{ textDecoration: 'none' }}>
             <span className={`transform -rotate-90 tracking-widest ${aI === 'tracker' ? 'font-bold' : 'font-semibold'} text-[9px]`}>
@@ -451,8 +475,8 @@
             <div key={i} className={`flex-1 flex items-center justify-end my-[2px]`}>
               <a href={`#month-${m.year}-${m.month}`}
                 className={`h-full flex items-center justify-center transition-all rounded-l-xl ${isActive
-                    ? 'w-[45px] bg-white text-slate-800 font-bold border border-r-0 border-slate-300 border-l-4 border-l-blue-500 z-20 shadow-sm'
-                    : 'w-[35px] bg-slate-100 text-slate-500 border border-r-0 border-slate-200 hover:w-[40px]'
+                  ? 'w-[45px] bg-white text-slate-800 font-bold border border-r-0 border-slate-300 border-l-4 border-l-blue-500 z-20 shadow-sm'
+                  : 'w-[35px] bg-slate-100 text-slate-500 border border-r-0 border-slate-200 hover:w-[40px]'
                   }`}
                 style={{ textDecoration: 'none' }}>
                 <span className={`transform -rotate-90 tracking-widest ${isActive ? 'font-bold' : 'font-semibold'} text-[10px]`}>
