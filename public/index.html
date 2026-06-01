@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="sk">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Planner</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React & ReactDOM 18 -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel pre JSX kompiláciu v prehliadači -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background-color: #F3F4F6;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page-break {
+      page-break-after: always;
+      break-inside: avoid;
+    }
+
+    ::-webkit-scrollbar {
+      display: none;
+    }
+
+    @media print {
+      body {
+        background: white;
+        margin: 0;
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        width: 100%;
+        height: 100%;
+      }
+
+      @page {
+        size: A4 landscape;
+        margin: 0;
+        padding: 0;
+      }
+
+      @page: portrait {
+        size: A4 portrait;
+      }
+
+      .page-break {
+        page-break-after: always;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root">
+    <div style="display: flex; height: 100vh; align-items: center; justify-content: center; flex-direction: column;">
+      <svg style="animation: spin 1s linear infinite; height: 40px; width: 40px; color: #2563EB; margin-bottom: 20px;"
+        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+        </path>
+      </svg>
+      <h2 style="font-family: sans-serif; color: #4B5563; font-weight: bold;">Načítavam Planner OS...</h2>
+    </div>
+  </div>
+
+  <script type="text/babel" data-type="module">
+    const { useState, useEffect, useMemo } = React;
+
+    const Icon = ({ name, className }) => {
+      useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [name]);
+      return <i data-lucide={name} className={className}></i>;
+    };
+
+    const getISOWeek = (date) => {
+      const target = new Date(date.valueOf());
+      const dayNr = (date.getDay() + 6) % 7;
+      target.setDate(target.getDate() - dayNr + 3);
+      const firstThursday = target.valueOf();
+      target.setMonth(0, 1);
+      if (target.getDay() !== 4) {
+        target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+      }
+      return 1 + Math.ceil((firstThursday - target) / 604800000);
+    };
+
+    const getWeekRangeStr = (w, c) => {
+      const startM = w[0].getMonth();
+      const endM = w[6].getMonth();
+      if (startM === endM) {
+        return `${w[0].getDate()}. - ${w[6].getDate()}. ${c.strings.months[endM]}`;
+      }
+      return `${w[0].getDate()}. ${c.strings.months[startM]} - ${w[6].getDate()}. ${c.strings.months[endM]}`;
+    };
+
+    const Links = (c, d) => ({
+      cal: c.calendarTool === 'apple' ? `calshow:${Math.floor(d.getTime() / 1000)}` : `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Event&dates=${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T080000Z/${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T090000Z`
+    });
+
+    const dictionaries = {
+      en: { appTitle: "Digital Planner", btnSettings: "Settings", btnGenerate: "Preview", btnSave: "Download PDF", langToggleMsg: "Language:", secLayout: "Layout", secLayoutDesc: "Choose orientation.", optLandscape: "Landscape", optLandscapeDesc: "For Apple Pencil", optPortrait: "Portrait", optPortraitDesc: "Notebook style", secCalendar: "Dates", lblStartYear: "Start Year", lblStartMonth: "Start Month", lblDuration: "Duration", opt10Months: "10 Months", opt12Months: "12 Months", lblPeriods: "Rows/Day", secIntegrations: "Integrations", lblCalendarTool: "Calendar App", secStrings: "Text Customization", secStringsDesc: "Edit all words.", subMainTexts: "Main Texts", subDays: "Days", subMonths: "Months", lblFull: "Full Name", lblShort: "Short", lblEvenWeek: "Even Week", lblOddWeek: "Odd Week", secTracker: "Leave Tracker & Limits", lblCount: "Boxes" },
+      sk: { appTitle: "Digital Planner", btnSettings: "Nastavenia", btnGenerate: "Náhľad", btnSave: "Stiahnuť PDF", langToggleMsg: "Jazyk:", secLayout: "Formát", secLayoutDesc: "Vyberte si orientáciu.", optLandscape: "Na šírku", optLandscapeDesc: "Pre Apple Pencil", optPortrait: "Na výšku", optPortraitDesc: "Klasický blok", secCalendar: "Dátumy", lblStartYear: "Rok", lblStartMonth: "Mesiac", lblDuration: "Trvanie", opt10Months: "10 Mes.", opt12Months: "12 Mes.", lblPeriods: "Riadky/Deň", secIntegrations: "Integrácie", lblCalendarTool: "Kalendár", secStrings: "Texty", secStringsDesc: "Upravte si slová.", subMainTexts: "Hlavné texty", subDays: "Dni", subMonths: "Mesiace", lblFull: "Názov", lblShort: "Skratka", lblEvenWeek: "Párny týždeň", lblOddWeek: "Nepárny týždeň", secTracker: "Prehľad Voľna (Počty políčok)", lblCount: "Počet" }
+    };
+
+    const presets = {
+      en: { title: "Teacher's Planner", todo: "To-Do List", notes: "Notes", prep: "Prep", week: "Week", evenWeek: "Even Week", oddWeek: "Odd Week", trackerTitle: "Absence & Leave Tracker", vacation1: "Vacation", vacation2: "Vacation", doctor: "Doctor / Medical", family: "Family Care", sick1: "Sick Days (1st Term)", sick2: "Sick Days (2nd Term)", nv: "Comp Time (Hours)", months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], shortMonths: ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"], days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], shortDays: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] },
+      sk: { title: "Učiteľský Plánovač", todo: "Úlohy", notes: "Poznámky", prep: "Príprava", week: "Týždeň", evenWeek: "Párny týždeň", oddWeek: "Nepárny týždeň", trackerTitle: "Prehľad voľna a absencií", vacation1: "Dovolenka", vacation2: "Dovolenka", doctor: "Lekár (Vlastný)", family: "Lekár (Sprievod) / OČR", sick1: "Sick Days (1. polrok)", sick2: "Sick Days (2. polrok)", nv: "Náhradné voľno (Záznam hodín)", months: ["Január", "Február", "Marec", "Apríl", "Máj", "Jún", "Júl", "August", "September", "Október", "November", "December"], shortMonths: ["JAN", "FEB", "MAR", "APR", "MÁJ", "JÚN", "JÚL", "AUG", "SEP", "OKT", "NOV", "DEC"], days: ["Pondelok", "Utorok", "Streda", "Štvrtok", "Piatok", "Sobota", "Nedeľa"], shortDays: ["PO", "UT", "ST", "ŠT", "PI", "SO", "NE"] }
+    };
+
+    function App() {
+      const [view, setView] = useState('settings');
+      const [isDownloading, setIsDownloading] = useState(false);
+      const [appLang, setAppLang] = useState('en');
+
+      const [config, setConfig] = useState({
+        orientation: 'landscape', startYear: new Date().getFullYear(), startMonth: 8, durationMonths: 10, periodsCount: 8, calendarTool: 'google', strings: presets.en,
+        trackerCounts: { vacation1: 45, vacation2: 45, doctor: 7, family: 7, sick1: 2, sick2: 2, nv: 1 } // nv is used just as a boolean toggle (0 or >0)
+      });
+
+      useEffect(() => {
+        const userLang = navigator.language || navigator.userLanguage;
+        if (userLang && (userLang.startsWith('sk') || userLang.startsWith('cs'))) {
+          setAppLang('sk'); setConfig(prev => ({ ...prev, strings: presets.sk }));
+        }
+      }, []);
+
+      const ui = dictionaries[appLang];
+      const changeAppLang = (lang) => { setAppLang(lang); setConfig(prev => ({ ...prev, strings: presets[lang] })); };
+
+      const handleDownloadPdf = async () => {
+        setIsDownloading(true);
+        try {
+          const res = await fetch('/api/generate-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+          });
+          if (!res.ok) throw new Error("Chyba servera - Skontrolujte logy Dockeru");
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${config.strings.title.replace(/\s+/g, '_')}.pdf`;
+          a.click();
+        } catch (err) {
+          alert("Nepodarilo sa vygenerovať PDF: " + err.message);
+        } finally {
+          setIsDownloading(false);
+        }
+      };
+
+      return (
+        <div>
+          <div className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-sm print:hidden">
+            <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center"><Icon name="pen-line" className="text-white w-4 h-4" /></div>
+                <h1 className="font-bold text-lg tracking-tight">{ui.appTitle}</h1>
+              </div>
+              <div className="flex gap-3 items-center">
+                {view === 'settings' && (
+                  <div className="flex items-center gap-2 mr-6 bg-slate-100 p-1 rounded-lg">
+                    <button onClick={() => changeAppLang('en')} className={`px-3 py-1 rounded-md text-xs font-bold transition ${appLang === 'en' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>EN</button>
+                    <button onClick={() => changeAppLang('sk')} className={`px-3 py-1 rounded-md text-xs font-bold transition ${appLang === 'sk' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>SK</button>
+                  </div>
+                )}
+                {view === 'preview' && (<button onClick={() => setView('settings')} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"><Icon name="settings" className="w-4 h-4" /> {ui.btnSettings}</button>)}
+                {view === 'settings' && (<button onClick={() => setView('preview')} className="flex items-center gap-2 px-6 py-2 bg-slate-200 text-slate-800 text-sm font-bold rounded-xl hover:bg-slate-300 transition"><Icon name="eye" className="w-4 h-4" /> {ui.btnGenerate}</button>)}
+                <button onClick={handleDownloadPdf} disabled={isDownloading} className={`flex items-center gap-2 px-6 py-2 text-white text-sm font-bold rounded-xl transition shadow-md ${isDownloading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                  <Icon name={isDownloading ? "loader-2" : "download"} className={`w-4 h-4 ${isDownloading ? 'animate-spin' : ''}`} />
+                  {isDownloading ? "Generujem PDF..." : ui.btnSave}
+                </button>
+              </div>
+            </div>
+          </div>
+          <main className="p-4 sm:p-8 flex justify-center">
+            {view === 'settings' ? <SettingsDashboard config={config} setConfig={setConfig} ui={ui} /> : <PlannerDocument config={config} />}
+          </main>
+        </div>
+      );
+    }
+
+    function SettingsDashboard({ config, setConfig, ui }) {
+      const uS = (k, v) => setConfig(p => ({ ...p, strings: { ...p.strings, [k]: v } }));
+      const uA = (k, i, v) => { const a = [...config.strings[k]]; a[i] = v; setConfig(p => ({ ...p, strings: { ...p.strings, [k]: a } })); };
+      const uTC = (k, v) => setConfig(p => ({ ...p, trackerCounts: { ...p.trackerCounts, [k]: parseInt(v) || 0 } }));
+
+      return (
+        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 pb-20 print:hidden">
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <h2 className="text-xl font-bold mb-4">{ui.secLayout}</h2>
+              <div className="flex gap-4">
+                <label className={`flex-1 p-4 rounded-xl border-2 cursor-pointer ${config.orientation === 'landscape' ? 'border-blue-500 bg-blue-50' : 'border-slate-100'}`}><input type="radio" value="landscape" checked={config.orientation === 'landscape'} onChange={e => setConfig({ ...config, orientation: e.target.value })} className="hidden" /><div className="font-bold">{ui.optLandscape}</div></label>
+                <label className={`flex-1 p-4 rounded-xl border-2 cursor-pointer ${config.orientation === 'portrait' ? 'border-blue-500 bg-blue-50' : 'border-slate-100'}`}><input type="radio" value="portrait" checked={config.orientation === 'portrait'} onChange={e => setConfig({ ...config, orientation: e.target.value })} className="hidden" /><div className="font-bold">{ui.optPortrait}</div></label>
+              </div>
+            </div>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <h3 className="text-lg font-bold mb-4">{ui.secCalendar}</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="text-xs font-bold text-slate-500 uppercase">{ui.lblStartYear}</label><input type="number" value={config.startYear} onChange={e => setConfig({ ...config, startYear: parseInt(e.target.value) })} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                <div><label className="text-xs font-bold text-slate-500 uppercase">{ui.lblStartMonth}</label><select value={config.startMonth} onChange={e => setConfig({ ...config, startMonth: parseInt(e.target.value) })} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1">{config.strings.months.map((m, i) => <option key={i} value={i}>{m}</option>)}</select></div>
+                <div><label className="text-xs font-bold text-slate-500 uppercase">{ui.lblDuration}</label><select value={config.durationMonths} onChange={e => setConfig({ ...config, durationMonths: parseInt(e.target.value) })} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1"><option value={10}>10</option><option value={12}>12</option></select></div>
+                <div><label className="text-xs font-bold text-slate-500 uppercase">{ui.lblPeriods}</label><input type="number" value={config.periodsCount} onChange={e => setConfig({ ...config, periodsCount: parseInt(e.target.value) })} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              </div>
+            </div>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <h3 className="text-lg font-bold mb-4">{ui.secIntegrations}</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div><label className="text-xs font-bold text-slate-500 uppercase">{ui.lblCalendarTool}</label><select value={config.calendarTool} onChange={e => setConfig({ ...config, calendarTool: e.target.value })} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1"><option value="google">Google Calendar</option><option value="apple">Apple Calendar</option></select></div>
+              </div>
+            </div>
+
+            {/* SETTINGS PRE TRACKER */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+              <h3 className="text-lg font-bold mb-2">{ui.secTracker}</h3>
+              <p className="text-xs text-slate-500 mb-4">Ak pre položku nastavíte hodnotu 0, nevygeneruje sa v diári.</p>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Nadpis Strany</label><input type="text" value={config.strings.trackerTitle} onChange={e => uS('trackerTitle', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                </div>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Dovolenka ({config.startYear})</label><input type="text" value={config.strings.vacation1} onChange={e => uS('vacation1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.vacation1} onChange={e => uTC('vacation1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
+                </div>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Dovolenka ({config.startYear + 1})</label><input type="text" value={config.strings.vacation2} onChange={e => uS('vacation2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.vacation2} onChange={e => uTC('vacation2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
+                </div>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Lekár</label><input type="text" value={config.strings.doctor} onChange={e => uS('doctor', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.doctor} onChange={e => uTC('doctor', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
+                </div>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">OČR</label><input type="text" value={config.strings.family} onChange={e => uS('family', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.family} onChange={e => uTC('family', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
+                </div>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Sick Days (1. Polrok)</label><input type="text" value={config.strings.sick1} onChange={e => uS('sick1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.sick1} onChange={e => uTC('sick1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
+                </div>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Sick Days (2. Polrok)</label><input type="text" value={config.strings.sick2} onChange={e => uS('sick2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.sick2} onChange={e => uTC('sick2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
+                </div>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Náhradné voľno (Nadpis)</label><input type="text" value={config.strings.nv} onChange={e => uS('nv', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">Zobraziť (0/1)</label><input type="number" value={config.trackerCounts.nv} onChange={e => uTC('nv', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+            <h3 className="text-2xl font-bold mb-4">{ui.secStrings}</h3>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">Title</label><input type="text" value={config.strings.title} onChange={e => uS('title', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">To-Do</label><input type="text" value={config.strings.todo} onChange={e => uS('todo', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">Notes</label><input type="text" value={config.strings.notes} onChange={e => uS('notes', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">Lesson Prep</label><input type="text" value={config.strings.prep} onChange={e => uS('prep', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblEvenWeek}</label><input type="text" value={config.strings.evenWeek} onChange={e => uS('evenWeek', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblOddWeek}</label><input type="text" value={config.strings.oddWeek} onChange={e => uS('oddWeek', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+            </div>
+            <h4 className="text-sm font-bold mb-2">Mesiace</h4>
+            <div className="grid grid-cols-2 gap-2">
+              {config.strings.months.map((m, i) => (
+                <div key={i} className="flex gap-2"><input type="text" value={m} onChange={e => uA('months', i, e.target.value)} className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" /><input type="text" value={config.strings.shortMonths[i]} onChange={e => uA('shortMonths', i, e.target.value)} className="w-16 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center" /></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const TrackerPage = ({ c, am, isL }) => {
+      const TrackerBlock = ({ title, count, colorClass }) => (
+        <div className="mb-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <h4 className={`text-[12px] font-black uppercase tracking-widest mb-4 ${colorClass}`}>{title}</h4>
+          <div className="flex flex-wrap gap-2.5">
+            {[...Array(count)].map((_, i) => (
+              <div key={i} className="w-7 h-7 rounded-lg border-2 border-slate-200 bg-slate-50 flex items-center justify-center shadow-sm">
+                <span className="text-[10px] text-slate-400 font-bold">{i + 1}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+      return (
+        <div id="tracker-page" className={`page-break ${isL ? 'w-[297mm] h-[210mm]' : 'w-[210mm] h-[297mm]'} bg-[#F8F9FA] relative border border-slate-200 overflow-hidden mb-8`}>
+          <Tabs c={c} am={am} aI={'tracker'} isL={isL} />
+          <div className={`p-10 pr-[65px] h-full flex flex-col`}>
+            <div className="mb-8">
+              <h2 className="text-4xl font-extrabold text-slate-800 uppercase tracking-tight">{c.strings.trackerTitle}</h2>
+              <p className="text-xl font-bold text-slate-400">{c.startYear} / {c.startYear + 1}</p>
+            </div>
+
+            <div className={`flex-1 flex flex-col`}>
+              <div className={`grid grid-cols-2 ${isL ? 'gap-8' : 'gap-6'} h-full`}>
+                <div className={`flex flex-col`}>
+                  {c.trackerCounts.vacation1 > 0 && <TrackerBlock title={`${c.strings.vacation1} ${c.startYear}`} count={c.trackerCounts.vacation1} colorClass="text-blue-600" />}
+                  {c.trackerCounts.vacation2 > 0 && <TrackerBlock title={`${c.strings.vacation2} ${c.startYear + 1}`} count={c.trackerCounts.vacation2} colorClass="text-blue-600" />}
+                </div>
+                <div className={`flex flex-col`}>
+                  {c.trackerCounts.doctor > 0 && <TrackerBlock title={c.strings.doctor} count={c.trackerCounts.doctor} colorClass="text-rose-600" />}
+                  {c.trackerCounts.family > 0 && <TrackerBlock title={c.strings.family} count={c.trackerCounts.family} colorClass="text-orange-600" />}
+
+                  {(c.trackerCounts.sick1 > 0 || c.trackerCounts.sick2 > 0) && (
+                    <div className="grid grid-cols-2 gap-4">
+                      {c.trackerCounts.sick1 > 0 && <TrackerBlock title={c.strings.sick1} count={c.trackerCounts.sick1} colorClass="text-purple-600" />}
+                      {c.trackerCounts.sick2 > 0 && <TrackerBlock title={c.strings.sick2} count={c.trackerCounts.sick2} colorClass="text-purple-600" />}
+                    </div>
+                  )}
+
+                  {c.trackerCounts.nv > 0 && (
+                    <div className="mt-2 flex-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                      <h4 className={`text-[12px] font-black uppercase tracking-widest mb-4 text-emerald-600`}>{c.strings.nv}</h4>
+                      <div className="flex-1 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 min-h-[120px]">
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    function PlannerDocument({ config }) {
+      const am = useMemo(() => {
+        const m = []; let y = config.startYear; let mm = config.startMonth;
+        for (let i = 0; i < config.durationMonths; i++) { m.push({ year: y, month: mm }); mm++; if (mm > 11) { mm = 0; y++; } } return m;
+      }, [config]);
+
+      const getW = (y, m) => {
+        const w = []; let curr = new Date(y, m, 1, 12, 0, 0); let offset = curr.getDay() === 0 ? 6 : curr.getDay() - 1;
+        curr.setDate(curr.getDate() - offset);
+        while (curr.getMonth() === m || w.length < 4) {
+          if (curr.getFullYear() > y || (curr.getFullYear() === y && curr.getMonth() > m)) { if (w.length >= 4) break; }
+          if (curr.getFullYear() > y + 1) break;
+          let temp = []; for (let i = 0; i < 7; i++) { temp.push(new Date(curr)); curr.setDate(curr.getDate() + 1); } w.push(temp);
+        } return w;
+      };
+
+      const isL = config.orientation === 'landscape';
+      const bgColors = ['bg-rose-100', 'bg-orange-100', 'bg-amber-100', 'bg-green-100', 'bg-blue-100', 'bg-indigo-100'];
+      const tColors = ['text-rose-700', 'text-orange-700', 'text-amber-700', 'text-green-700', 'text-blue-700', 'text-indigo-700'];
+
+      return (
+        <div className={`flex flex-col w-full ${isL ? 'max-w-[297mm]' : 'max-w-[210mm]'}`}>
+
+          <TrackerPage c={config} am={am} isL={isL} />
+
+          {am.map((mObj, idx) => {
+            const wks = getW(mObj.year, mObj.month);
+            const t = { bg: bgColors[idx % 6], text: tColors[idx % 6] };
+            const renderedWeeks = wks.filter(w => {
+              const wM = w[3].getMonth(); const wY = w[3].getFullYear();
+              let isO = (wM === mObj.month && wY === mObj.year);
+              if (idx === 0 && !isO) { const fD = new Date(am[0].year, am[0].month, 1, 12); if (w[3] < fD) isO = true; }
+              if (idx === am.length - 1 && !isO) { const lD = new Date(am[am.length - 1].year, am[am.length - 1].month + 1, 0, 12); if (w[3] > lD) isO = true; }
+              return isO;
+            });
+
+            return renderedWeeks.map((w, wIdx) => {
+              const mId = wIdx === 0 ? `month-${mObj.year}-${mObj.month}` : undefined;
+              const wId = `week-${w[3].getFullYear()}-${w[3].getMonth()}-${w[0].getDate()}`;
+              return isL
+                ? <LandscapeWeek key={`${idx}-${wIdx}`} c={config} w={w} mObj={mObj} mId={mId} wId={wId} wks={wks} am={am} aI={idx} t={t} />
+                : <PortraitWeek key={`${idx}-${wIdx}`} c={config} w={w} mObj={mObj} mId={mId} wId={wId} wks={wks} am={am} aI={idx} t={t} />;
+            });
+          })}
+        </div>
+      );
+    }
+
+    const MiniCalendar = ({ c, mObj, currentWeek, wks, t }) => {
+      return (
+        <div className="flex flex-col bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+          <div className="flex gap-1 mb-2 justify-center">
+            {c.strings.shortDays.map((d, i) => (
+              <div key={i} className={`w-7 text-center text-[9.5px] font-black uppercase tracking-wider ${i > 4 ? 'text-slate-300' : 'text-slate-400'}`}>
+                {d.substring(0, 2)}
+              </div>
+            ))}
+          </div>
+          {wks.map((w, wIdx) => {
+            const wId = `week-${w[3].getFullYear()}-${w[3].getMonth()}-${w[0].getDate()}`;
+            return (
+              <div key={wIdx} className="flex gap-1 mb-1 justify-center last:mb-0">
+                {w.map((d, dIdx) => {
+                  const isCurrMonth = d.getMonth() === mObj.month;
+                  const isCurrWeek = currentWeek[0].getTime() === w[0].getTime();
+                  return (
+                    <a key={dIdx} href={`#${wId}`}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs ${!isCurrMonth ? 'opacity-30' : ''} ${isCurrWeek && isCurrMonth ? `${t.bg} ${t.text} font-bold shadow-sm ring-1 ring-black/5` : 'text-slate-600 hover:bg-slate-100'} transition-colors`}
+                      style={{ textDecoration: 'none' }}>
+                      {d.getDate()}
+                    </a>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+      )
+    }
+
+    const Tabs = ({ c, am, aI, isL }) => (
+      <div className={`absolute right-0 bottom-6 ${isL ? 'top-6' : 'top-12'} w-[45px] flex flex-col justify-between z-10 print:opacity-100`}>
+
+        <div className={`flex items-center justify-end mb-4`}>
+          <a href="#tracker-page"
+            className={`h-12 flex items-center justify-center transition-all rounded-l-xl ${aI === 'tracker'
+                ? 'w-[45px] bg-slate-700 text-white font-bold z-20 shadow-md'
+                : 'w-[35px] bg-slate-100 text-slate-500 border border-r-0 border-slate-200 hover:w-[40px]'
+              }`}
+            style={{ textDecoration: 'none' }}>
+            <span className={`transform -rotate-90 tracking-widest ${aI === 'tracker' ? 'font-bold' : 'font-semibold'} text-[9px]`}>
+              INFO
+            </span>
+          </a>
+        </div>
+
+        {am.map((m, i) => {
+          const isActive = aI === i;
+          return (
+            <div key={i} className={`flex-1 flex items-center justify-end my-[2px]`}>
+              <a href={`#month-${m.year}-${m.month}`}
+                className={`h-full flex items-center justify-center transition-all rounded-l-xl ${isActive
+                    ? 'w-[45px] bg-white text-slate-800 font-bold border border-r-0 border-slate-300 border-l-4 border-l-blue-500 z-20 shadow-sm'
+                    : 'w-[35px] bg-slate-100 text-slate-500 border border-r-0 border-slate-200 hover:w-[40px]'
+                  }`}
+                style={{ textDecoration: 'none' }}>
+                <span className={`transform -rotate-90 tracking-widest ${isActive ? 'font-bold' : 'font-semibold'} text-[10px]`}>
+                  {c.strings.shortMonths[m.month]}
+                </span>
+              </a>
+            </div>
+          );
+        })}
+      </div>
+    );
+
+    const LandscapeWeek = ({ c, w, mObj, mId, wId, wks, am, aI, t }) => {
+      const l = Links(c, w[0]);
+      const isEvenWeek = getISOWeek(w[0]) % 2 === 0;
+      return (
+        <div id={wId} className="page-break w-[297mm] h-[210mm] bg-[#F8F9FA] relative border border-slate-200 overflow-hidden mb-8">
+          {mId && <div id={mId} className="absolute -top-20"></div>}
+          <Tabs c={c} am={am} aI={aI} isL={true} />
+          <div className="p-8 pr-[60px] h-full flex flex-col">
+            <div className="flex-1 flex gap-5">
+
+              {/* Lavy stlpec - Dni a Hlavicka */}
+              <div className="w-[70%] flex flex-col">
+                <div className="flex items-baseline gap-4 mb-3">
+                  <h2 className={`text-4xl font-extrabold ${t.text} uppercase tracking-tight`}>{c.strings.months[w[3].getMonth()]}</h2>
+                  <div className="flex items-center gap-3">
+                    <p className="text-xl font-bold text-slate-400">{getWeekRangeStr(w, c)}</p>
+                    <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest ${t.bg} ${t.text} opacity-80`}>
+                      {isEvenWeek ? c.strings.evenWeek : c.strings.oddWeek}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex-1 flex gap-3">
+                  {w.slice(0, 5).map((d, i) => {
+                    const isCurr = d.getMonth() === mObj.month;
+                    return (
+                      <div key={i} className={`flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden group ${!isCurr ? 'opacity-60 bg-slate-50' : ''}`}>
+                        <div className={`${t.bg} p-2 flex flex-col gap-2 border-b border-slate-200`}>
+                          <div className="flex justify-between items-start px-1 pt-1">
+                            <div className="pointer-events-none">
+                              <p className={`text-[10px] font-bold uppercase tracking-widest ${t.text} opacity-80 mb-1`}>{c.strings.shortDays[i]}</p>
+                              <p className={`text-2xl font-black ${t.text} leading-none`}>{d.getDate()}{!isCurr && <span className="text-[10px] ml-1">{c.strings.shortMonths[d.getMonth()]}</span>}</p>
+                            </div>
+                            <a href={Links(c, d).cal} target="_blank" className="w-6 h-6 rounded-lg bg-white/50 flex items-center justify-center opacity-0 group-hover:opacity-100 print:opacity-100 transition z-20 hover:bg-white">
+                              <Icon name="plus" className={`w-4 h-4 ${t.text}`} />
+                            </a>
+                          </div>
+                          <div className="h-5 w-full bg-white/40 rounded-md border border-white/60"></div>
+                        </div>
+                        <div className="flex-1 flex flex-col">
+                          {[...Array(c.periodsCount)].map((_, pIdx) => (
+                            <div key={pIdx} className="flex-1 border-b border-slate-100 flex">
+                              <div className="w-6 bg-slate-50 border-r border-slate-100 flex justify-center pt-2">
+                                <span className="text-[10px] font-bold text-slate-400">{pIdx + 1}</span>
+                              </div>
+                              <div className="flex-1"></div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Pravy stlpec - Kalendar a Bloky */}
+              <div className="w-[30%] flex flex-col gap-4">
+                <div className="flex justify-end">
+                  <MiniCalendar c={c} mObj={mObj} currentWeek={w} wks={wks} t={t} />
+                </div>
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 flex-1 flex flex-col">
+                  <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-4">{c.strings.todo}</h3>
+                  <div className="flex-1 flex flex-col justify-around">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded-full border-2 border-slate-200 shrink-0"></div>
+                        <div className="flex-1 border-b-2 border-slate-100 mt-2"></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="h-[20%] flex gap-3">
+                  <div className={`flex-1 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col ${w[5].getMonth() !== mObj.month ? 'opacity-60 bg-slate-50' : ''}`}>
+                    <div className="flex-1 flex flex-col items-center justify-center">
+                      <span className="text-[12px] font-bold uppercase tracking-widest text-slate-400 mb-3">{c.strings.shortDays[5]}</span>
+                      <span className="text-4xl font-black text-slate-700 leading-none">{w[5].getDate()}</span>
+                      {w[5].getMonth() !== mObj.month && <span className="text-[10px] font-bold text-slate-400 mt-1">{c.strings.shortMonths[w[5].getMonth()]}</span>}
+                    </div>
+                  </div>
+                  <div className={`flex-1 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col ${w[6].getMonth() !== mObj.month ? 'opacity-60 bg-slate-50' : ''}`}>
+                    <div className="flex-1 flex flex-col items-center justify-center">
+                      <span className="text-[12px] font-bold uppercase tracking-widest text-slate-400 mb-3">{c.strings.shortDays[6]}</span>
+                      <span className="text-4xl font-black text-slate-700 leading-none">{w[6].getDate()}</span>
+                      {w[6].getMonth() !== mObj.month && <span className="text-[10px] font-bold text-slate-400 mt-1">{c.strings.shortMonths[w[6].getMonth()]}</span>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const PortraitWeek = ({ c, w, mObj, mId, wId, wks, am, aI, t }) => {
+      const l = Links(c, w[0]);
+      const isEvenWeek = getISOWeek(w[0]) % 2 === 0;
+      return (
+        <div id={wId} className="page-break w-[210mm] h-[297mm] bg-[#F8F9FA] relative border border-slate-200 overflow-hidden mb-8">
+          {mId && <div id={mId} className="absolute -top-20"></div>}
+          <Tabs c={c} am={am} aI={aI} isL={false} />
+          <div className="p-10 pr-[65px] h-full flex flex-col">
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex flex-col justify-start">
+                <h2 className={`text-5xl font-extrabold ${t.text} uppercase mb-1`}>{c.strings.months[w[3].getMonth()]}</h2>
+                <div className="flex items-center gap-3">
+                  <p className="text-lg font-bold text-slate-400">{c.strings.week} {getWeekRangeStr(w, c)}</p>
+                  <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest ${t.bg} ${t.text} opacity-80`}>
+                    {isEvenWeek ? c.strings.evenWeek : c.strings.oddWeek}
+                  </span>
+                </div>
+              </div>
+              <MiniCalendar c={c} mObj={mObj} currentWeek={w} wks={wks} t={t} />
+            </div>
+            <div className="flex-1 flex gap-3 mb-5">
+              {w.slice(0, 5).map((d, i) => {
+                const isCurr = d.getMonth() === mObj.month;
+                return (
+                  <div key={i} className={`flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden group ${!isCurr ? 'opacity-60 bg-slate-50' : ''}`}>
+                    <div className={`${t.bg} p-2 flex flex-col gap-2 border-b border-slate-200`}>
+                      <div className="flex justify-between items-start px-1 pt-1">
+                        <div className="pointer-events-none">
+                          <p className={`text-[10px] font-bold uppercase tracking-widest ${t.text} opacity-80 mb-1`}>{c.strings.shortDays[i]}</p>
+                          <p className={`text-2xl font-black ${t.text} leading-none`}>{d.getDate()}{!isCurr && <span className="text-[10px] ml-1">{c.strings.shortMonths[d.getMonth()]}</span>}</p>
+                        </div>
+                        <a href={Links(c, d).cal} target="_blank" className="w-6 h-6 rounded-lg bg-white/50 flex items-center justify-center opacity-0 group-hover:opacity-100 print:opacity-100 transition z-20 hover:bg-white">
+                          <Icon name="plus" className={`w-4 h-4 ${t.text}`} />
+                        </a>
+                      </div>
+                      <div className="h-5 w-full bg-white/40 rounded-md border border-white/60"></div>
+                    </div>
+                    <div className="flex-1 flex flex-col">
+                      {[...Array(c.periodsCount)].map((_, pIdx) => (
+                        <div key={pIdx} className="flex-1 border-b border-slate-100 relative p-1.5 flex flex-col justify-end">
+                          <span className="absolute top-2 left-2 text-[10px] font-bold text-slate-300">{pIdx + 1}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="h-44 flex gap-4">
+              <div className="w-1/4 flex flex-col gap-3">
+                <div className={`flex-1 bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-center ${w[5].getMonth() !== mObj.month ? 'opacity-60 bg-slate-50' : ''}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold uppercase text-slate-400">{c.strings.shortDays[5]}</span>
+                    <span className="text-xl font-black text-slate-700">{w[5].getDate()}{w[5].getMonth() !== mObj.month && <span className="text-[10px] ml-1">{c.strings.shortMonths[w[5].getMonth()]}</span>}</span>
+                  </div>
+                </div>
+                <div className={`flex-1 bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-center ${w[6].getMonth() !== mObj.month ? 'opacity-60 bg-slate-50' : ''}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold uppercase text-slate-400">{c.strings.shortDays[6]}</span>
+                    <span className="text-xl font-black text-slate-700">{w[6].getDate()}{w[6].getMonth() !== mObj.month && <span className="text-[10px] ml-1">{c.strings.shortMonths[w[6].getMonth()]}</span>}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="w-1/3 border border-slate-200 rounded-2xl p-5 bg-white flex flex-col">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">{c.strings.todo}</h3>
+                <div className="flex-1 flex flex-col justify-around">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="flex gap-2">
+                      <div className="w-4 h-4 rounded-sm border-2 border-slate-200"></div>
+                      <div className="flex-1 border-b-2 border-slate-100 mt-2"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex-1 border border-slate-200 rounded-2xl p-5 bg-white flex flex-col">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">{c.strings.notes}</h3>
+                <div className="flex-1 flex flex-col justify-around opacity-40">
+                  {[1, 2, 3, 4, 5].map(i => <div key={i} className="border-b border-slate-400 w-full"></div>)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('render') === 'true') {
+      window.renderForPdf = (configObj) => {
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        const Wrapper = () => {
+          useEffect(() => {
+            setTimeout(() => {
+              const el = document.createElement('div');
+              el.id = 'render-complete';
+              document.body.appendChild(el);
+            }, 1000);
+          }, []);
+          return (
+            <div style={{ padding: 0, margin: 0, backgroundColor: 'white' }}>
+              <style>{`@media print { @page { size: A4 ${configObj.orientation}; } }`}</style>
+              <PlannerDocument config={configObj} />
+            </div>
+          );
+        };
+        root.render(<Wrapper />);
+      };
+    } else {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    }
+  </script>
+</body>
+
+</html>
