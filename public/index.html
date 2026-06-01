@@ -40,6 +40,11 @@
     }
 
     @media print {
+      * {
+        box-shadow: none !important;
+        text-shadow: none !important;
+      }
+
       body {
         background: white;
         margin: 0;
@@ -232,7 +237,7 @@
       const uTC = (k, v) => setConfig(p => ({ ...p, trackerCounts: { ...p.trackerCounts, [k]: parseInt(v) || 0 } }));
 
       return (
-        <div className="w-full max-w-6xl grid gap-8 pb-20 print:hidden" style={{gridTemplateColumns: '1fr'}}>
+        <div className="w-full max-w-6xl grid gap-8 pb-20 print:hidden" style={{ gridTemplateColumns: '1fr' }}>
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <h2 className="text-xl font-bold mb-4">{ui.secLayout}</h2>
