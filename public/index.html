@@ -507,7 +507,7 @@
               {/* Lavy stlpec - Dni a Hlavicka */}
               <div className="w-[70%] flex flex-col">
                 <div className="flex items-baseline gap-4 mb-3">
-                  <h2 className={`text-4xl font-extrabold ${t.text} uppercase tracking-tight`}>{c.strings.months[w[3].getMonth()]}</h2>
+                  <h2 className={`text-4xl font-extrabold ${t.text} uppercase tracking-tight`}>{c.strings.months[mObj.month]}</h2>
                   <div className="flex items-center gap-3">
                     <p className="text-xl font-bold text-slate-400">{getWeekRangeStr(w, c)}</p>
                     <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest ${t.bg} ${t.text} opacity-80`}>
@@ -598,7 +598,7 @@
           <div className="p-10 pr-[65px] h-full flex flex-col">
             <div className="flex justify-between items-start mb-6">
               <div className="flex flex-col justify-start">
-                <h2 className={`text-5xl font-extrabold ${t.text} uppercase mb-1`}>{c.strings.months[w[3].getMonth()]}</h2>
+                <h2 className={`text-5xl font-extrabold ${t.text} uppercase mb-1`}>{c.strings.months[mObj.month]}</h2>
                 <div className="flex items-center gap-3">
                   <p className="text-lg font-bold text-slate-400">{c.strings.week} {getWeekRangeStr(w, c)}</p>
                   <span className={`px-2 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest ${t.bg} ${t.text} opacity-80`}>
