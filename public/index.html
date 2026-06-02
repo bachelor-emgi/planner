@@ -121,7 +121,8 @@
         en: "Loading Planner OS...",
         sk: "Načítavam Planner OS..."
       };
-      const userLang = (navigator.language || "").toLowerCase();
+      const rawLang = typeof navigator.language === "string" ? navigator.language : "";
+      const userLang = rawLang.toLowerCase();
       const langKey = userLang.startsWith("sk") || userLang.startsWith("cs") ? "sk" : "en";
       const loadingEl = document.getElementById("loading-text");
       if (loadingEl) {
@@ -190,10 +191,17 @@
     const isSafeLanguageCode = (code) => /^[A-Za-z0-9-]+$/.test(code);
 
     const resolvePreferredLang = (languages, fallback) => {
-      const userLang = normalizeLanguageCode(navigator.language || "");
+      const userLang = normalizeLanguageCode(navigator.language);
       const userBase = userLang.split("-")[0];
       const matchLang = (code) => languages.find((lang) => normalizeLanguageCode(lang.code) === normalizeLanguageCode(code));
-      return (matchLang(userLang) || matchLang(userBase) || matchLang(fallback) || languages[0] || { code: fallback || DEFAULT_FALLBACK_LANG }).code;
+      const exactMatch = matchLang(userLang);
+      if (exactMatch) return exactMatch.code;
+      const baseMatch = matchLang(userBase);
+      if (baseMatch) return baseMatch.code;
+      const fallbackMatch = matchLang(fallback);
+      if (fallbackMatch) return fallbackMatch.code;
+      if (languages[0]?.code) return languages[0].code;
+      return fallback || DEFAULT_FALLBACK_LANG;
     };
 
     const LanguagePicker = ({ languages, current, onChange, label }) => {
@@ -310,7 +318,10 @@
         const normalizedFileCode = normalizeLanguageCode(fileCode);
         const normalizedFallback = fallbackCode ? normalizeLanguageCode(fallbackCode) : null;
         try {
-          if (!isSafeLanguageCode(requestedCode) || !isSafeLanguageCode(fileCode)) {
+          if (!isSafeLanguageCode(requestedCode)) {
+            throw new Error(`Invalid language code '${requestedCode}'. Only letters, numbers, and hyphens are allowed.`);
+          }
+          if (!isSafeLanguageCode(fileCode)) {
             throw new Error(`Invalid language code '${fileCode}'. Only letters, numbers, and hyphens are allowed.`);
           }
           const res = await fetch(`/strings/${fileCode}.json`);
