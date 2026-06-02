@@ -170,13 +170,15 @@
       shortDays: Array(7).fill("")
     };
 
+    const DEFAULT_FALLBACK_LANG = 'en';
     const normalizeLanguageCode = (lang) => (lang || "").toLowerCase();
+    const isSafeLanguageCode = (code) => /^[A-Za-z0-9-]+$/.test(code);
 
     const resolvePreferredLang = (languages, fallback) => {
       const userLang = normalizeLanguageCode(navigator.language || navigator.userLanguage);
       const userBase = userLang.split("-")[0];
       const matchLang = (code) => languages.find((lang) => normalizeLanguageCode(lang.code) === normalizeLanguageCode(code));
-      return (matchLang(userLang) || matchLang(userBase) || matchLang(fallback) || languages[0] || { code: fallback || "en" }).code;
+      return (matchLang(userLang) || matchLang(userBase) || matchLang(fallback) || languages[0] || { code: fallback || DEFAULT_FALLBACK_LANG }).code;
     };
 
     const LanguagePicker = ({ languages, current, onChange, label }) => {
@@ -239,8 +241,8 @@
       const [view, setView] = useState('settings');
       const [isDownloading, setIsDownloading] = useState(false);
       const [languages, setLanguages] = useState([]);
-      const [appLang, setAppLang] = useState('en');
-      const [fallbackLang, setFallbackLang] = useState('en');
+      const [appLang, setAppLang] = useState(DEFAULT_FALLBACK_LANG);
+      const [fallbackLang, setFallbackLang] = useState(DEFAULT_FALLBACK_LANG);
       const [ui, setUi] = useState(null);
 
       const [config, setConfig] = useState({
@@ -257,17 +259,17 @@
             const data = await res.json();
             if (!isActive) return;
             const available = Array.isArray(data.languages) ? data.languages : [];
-            const defaultLang = data.default || 'en';
+            const defaultLang = data.default || DEFAULT_FALLBACK_LANG;
             setFallbackLang(defaultLang);
             setLanguages(available);
             const preferred = resolvePreferredLang(available, defaultLang);
             await loadLanguage(preferred, available, defaultLang);
           } catch (err) {
             console.error('Failed to load language index', err);
-            const fallbackList = [{ code: 'en', label: 'English', dir: 'ltr' }];
-            setFallbackLang('en');
+            const fallbackList = [{ code: DEFAULT_FALLBACK_LANG, label: 'English', dir: 'ltr' }];
+            setFallbackLang(DEFAULT_FALLBACK_LANG);
             setLanguages(fallbackList);
-            await loadLanguage('en', fallbackList, 'en');
+            await loadLanguage(DEFAULT_FALLBACK_LANG, fallbackList, DEFAULT_FALLBACK_LANG);
           }
         };
         loadIndex();
@@ -286,12 +288,14 @@
       };
 
       const loadLanguage = async (langCode, availableLanguages, fallbackCode) => {
-        const requestedCode = langCode || fallbackCode || 'en';
+        const requestedCode = langCode || fallbackCode || DEFAULT_FALLBACK_LANG;
         const meta = availableLanguages.find((lang) => normalizeLanguageCode(lang.code) === normalizeLanguageCode(requestedCode));
         const fileCode = meta?.code || requestedCode;
+        if (!isSafeLanguageCode(fileCode)) {
+          throw new Error(`Invalid language code ${fileCode}`);
+        }
         const normalizedFileCode = normalizeLanguageCode(fileCode);
-        const finalFallback = 'en';
-        const normalizedFallback = normalizeLanguageCode(fallbackCode || finalFallback);
+        const normalizedFallback = fallbackCode ? normalizeLanguageCode(fallbackCode) : null;
         try {
           const res = await fetch(`/strings/${fileCode}.json`);
           if (!res.ok) throw new Error(`Failed to load language file ${fileCode}`);
@@ -302,10 +306,10 @@
         } catch (err) {
           console.error(`Failed to load language ${fileCode}`, err);
           if (fallbackCode && normalizedFileCode !== normalizedFallback) {
-            return loadLanguage(fallbackCode, availableLanguages, finalFallback);
+            return loadLanguage(fallbackCode, availableLanguages, null);
           }
-          if (normalizedFileCode !== finalFallback) {
-            return loadLanguage(finalFallback, availableLanguages, finalFallback);
+          if (normalizedFileCode !== DEFAULT_FALLBACK_LANG) {
+            return loadLanguage(DEFAULT_FALLBACK_LANG, availableLanguages, null);
           }
           return false;
         }
