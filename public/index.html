@@ -170,12 +170,12 @@
       shortDays: Array(7).fill("")
     };
 
-    const normalizeLang = (lang) => (lang || "").toLowerCase();
+    const normalizeLanguageCode = (lang) => (lang || "").toLowerCase();
 
     const resolvePreferredLang = (languages, fallback) => {
-      const userLang = normalizeLang(navigator.language || navigator.userLanguage);
+      const userLang = normalizeLanguageCode(navigator.language || navigator.userLanguage);
       const userBase = userLang.split("-")[0];
-      const matchLang = (code) => languages.find((lang) => normalizeLang(lang.code) === normalizeLang(code));
+      const matchLang = (code) => languages.find((lang) => normalizeLanguageCode(lang.code) === normalizeLanguageCode(code));
       return (matchLang(userLang) || matchLang(userBase) || matchLang(fallback) || languages[0] || { code: fallback || "en" }).code;
     };
 
@@ -203,6 +203,7 @@
             <button
               type="button"
               onClick={() => setOpen((prev) => !prev)}
+              title={selectedLabel}
               className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 transition"
             >
               <span className="truncate max-w-[120px] sm:max-w-[160px]">{selectedLabel}</span>
@@ -251,7 +252,7 @@
         let isActive = true;
         const loadIndex = async () => {
           try {
-            const res = await fetch('/strings/index.json', { cache: 'no-store' });
+            const res = await fetch('/strings/index.json');
             if (!res.ok) throw new Error('Failed to load language index');
             const data = await res.json();
             if (!isActive) return;
@@ -286,12 +287,13 @@
 
       const loadLanguage = async (langCode, availableLanguages, fallbackCode) => {
         const requestedCode = langCode || fallbackCode || 'en';
-        const meta = availableLanguages.find((lang) => normalizeLang(lang.code) === normalizeLang(requestedCode));
+        const meta = availableLanguages.find((lang) => normalizeLanguageCode(lang.code) === normalizeLanguageCode(requestedCode));
         const fileCode = meta?.code || requestedCode;
-        const normalizedFileCode = normalizeLang(fileCode);
-        const normalizedFallback = normalizeLang(fallbackCode || 'en');
+        const normalizedFileCode = normalizeLanguageCode(fileCode);
+        const finalFallback = 'en';
+        const normalizedFallback = normalizeLanguageCode(fallbackCode || finalFallback);
         try {
-          const res = await fetch(`/strings/${fileCode}.json`, { cache: 'no-store' });
+          const res = await fetch(`/strings/${fileCode}.json`);
           if (!res.ok) throw new Error(`Failed to load language file ${fileCode}`);
           const data = await res.json();
           if (!data.ui || !data.presets) throw new Error(`Invalid language file ${fileCode}`);
@@ -300,10 +302,10 @@
         } catch (err) {
           console.error(`Failed to load language ${fileCode}`, err);
           if (fallbackCode && normalizedFileCode !== normalizedFallback) {
-            return loadLanguage(fallbackCode, availableLanguages, fallbackCode);
+            return loadLanguage(fallbackCode, availableLanguages, finalFallback);
           }
-          if (normalizedFileCode !== 'en') {
-            return loadLanguage('en', availableLanguages, 'en');
+          if (normalizedFileCode !== finalFallback) {
+            return loadLanguage(finalFallback, availableLanguages, finalFallback);
           }
           return false;
         }
