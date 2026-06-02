@@ -1,0 +1,17 @@
+{
+  "default": "en",
+  "languages": [
+    {
+      "code": "en",
+      "label": "English",
+      "flag": "🇬🇧",
+      "dir": "ltr"
+    },
+    {
+      "code": "sk",
+      "label": "Slovenčina",
+      "flag": "🇸🇰",
+      "dir": "ltr"
+    }
+  ]
+}
