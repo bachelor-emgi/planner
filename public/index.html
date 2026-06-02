@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="sk">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
@@ -111,12 +111,12 @@
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
         </path>
       </svg>
-      <h2 style="font-family: sans-serif; color: #4B5563; font-weight: bold;">Načítavam Planner OS...</h2>
+      <h2 style="font-family: sans-serif; color: #4B5563; font-weight: bold;">Loading Planner OS...</h2>
     </div>
   </div>
 
   <script type="text/babel" data-type="module">
-    const { useState, useEffect, useMemo } = React;
+    const { useState, useEffect, useMemo, useRef } = React;
 
     const Icon = ({ name, className }) => {
       useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [name]);
@@ -148,35 +148,178 @@
       cal: c.calendarTool === 'apple' ? `calshow:${Math.floor(d.getTime() / 1000)}` : `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Event&dates=${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T080000Z/${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T090000Z`
     });
 
-    const dictionaries = {
-      en: { appTitle: "Digital Planner", btnSettings: "Settings", btnGenerate: "Preview", btnSave: "Download PDF", btnGenerating: "Generating PDF...", pdfError: "Failed to generate PDF: ", serverError: "Server error - check the Docker logs.", langToggleMsg: "Language:", secLayout: "Layout", secLayoutDesc: "Choose orientation.", optLandscape: "Landscape", optLandscapeDesc: "For Apple Pencil", optPortrait: "Portrait", optPortraitDesc: "Notebook style", secCalendar: "Dates", lblStartYear: "Start Year", lblStartMonth: "Start Month", lblDuration: "Duration", opt10Months: "10 Months", opt12Months: "12 Months", lblPeriods: "Rows/Day", secIntegrations: "Integrations", lblCalendarTool: "Calendar App", secStrings: "Text Customization", secStringsDesc: "Edit all words.", subMainTexts: "Main Texts", subDays: "Days", subMonths: "Months", lblFull: "Full Name", lblShort: "Short", lblEvenWeek: "Even Week", lblOddWeek: "Odd Week", secTracker: "Leave Tracker & Limits", trackerNote: "If you set a value to 0, it won't be generated in the planner.", trackerTitleLabel: "Page Title", trackerVacationLabel: "Vacation", trackerDoctorLabel: "Doctor", trackerFamilyLabel: "Family Care", trackerSick1Label: "Sick Days (1st Term)", trackerSick2Label: "Sick Days (2nd Term)", trackerNvLabel: "Comp Time (Title)", trackerNvToggleLabel: "Show (0/1)", lblCount: "Boxes", lblTitle: "Title", lblTodo: "To-Do", lblNotes: "Notes", lblPrep: "Lesson Prep" },
-      sk: { appTitle: "Digital Planner", btnSettings: "Nastavenia", btnGenerate: "Náhľad", btnSave: "Stiahnuť PDF", btnGenerating: "Generujem PDF...", pdfError: "Nepodarilo sa vygenerovať PDF: ", serverError: "Chyba servera - Skontrolujte logy Dockeru.", langToggleMsg: "Jazyk:", secLayout: "Formát", secLayoutDesc: "Vyberte si orientáciu.", optLandscape: "Na šírku", optLandscapeDesc: "Pre Apple Pencil", optPortrait: "Na výšku", optPortraitDesc: "Klasický blok", secCalendar: "Dátumy", lblStartYear: "Rok", lblStartMonth: "Mesiac", lblDuration: "Trvanie", opt10Months: "10 Mes.", opt12Months: "12 Mes.", lblPeriods: "Riadky/Deň", secIntegrations: "Integrácie", lblCalendarTool: "Kalendár", secStrings: "Texty", secStringsDesc: "Upravte si slová.", subMainTexts: "Hlavné texty", subDays: "Dni", subMonths: "Mesiace", lblFull: "Názov", lblShort: "Skratka", lblEvenWeek: "Párny týždeň", lblOddWeek: "Nepárny týždeň", secTracker: "Prehľad Voľna (Počty políčok)", trackerNote: "Ak pre položku nastavíte hodnotu 0, nevygeneruje sa v diári.", trackerTitleLabel: "Nadpis Strany", trackerVacationLabel: "Dovolenka", trackerDoctorLabel: "Lekár", trackerFamilyLabel: "OČR", trackerSick1Label: "Sick Days (1. Polrok)", trackerSick2Label: "Sick Days (2. Polrok)", trackerNvLabel: "Náhradné voľno (Nadpis)", trackerNvToggleLabel: "Zobraziť (0/1)", lblCount: "Počet", lblTitle: "Názov", lblTodo: "Úlohy", lblNotes: "Poznámky", lblPrep: "Príprava" }
+    const EMPTY_PRESETS = {
+      title: "",
+      todo: "",
+      notes: "",
+      prep: "",
+      week: "",
+      evenWeek: "",
+      oddWeek: "",
+      trackerTitle: "",
+      vacation1: "",
+      vacation2: "",
+      doctor: "",
+      family: "",
+      sick1: "",
+      sick2: "",
+      nv: "",
+      months: Array(12).fill(""),
+      shortMonths: Array(12).fill(""),
+      days: Array(7).fill(""),
+      shortDays: Array(7).fill("")
     };
 
-    const presets = {
-      en: { title: "Teacher's Planner", todo: "To-Do List", notes: "Notes", prep: "Prep", week: "Week", evenWeek: "Even Week", oddWeek: "Odd Week", trackerTitle: "Absence & Leave Tracker", vacation1: "Vacation", vacation2: "Vacation", doctor: "Doctor / Medical", family: "Family Care", sick1: "Sick Days (1st Term)", sick2: "Sick Days (2nd Term)", nv: "Comp Time (Hours)", months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], shortMonths: ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"], days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], shortDays: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] },
-      sk: { title: "Učiteľský Plánovač", todo: "Úlohy", notes: "Poznámky", prep: "Príprava", week: "Týždeň", evenWeek: "Párny týždeň", oddWeek: "Nepárny týždeň", trackerTitle: "Prehľad voľna a absencií", vacation1: "Dovolenka", vacation2: "Dovolenka", doctor: "Lekár (Vlastný)", family: "Lekár (Sprievod) / OČR", sick1: "Sick Days (1. polrok)", sick2: "Sick Days (2. polrok)", nv: "Náhradné voľno (Záznam hodín)", months: ["Január", "Február", "Marec", "Apríl", "Máj", "Jún", "Júl", "August", "September", "Október", "November", "December"], shortMonths: ["JAN", "FEB", "MAR", "APR", "MÁJ", "JÚN", "JÚL", "AUG", "SEP", "OKT", "NOV", "DEC"], days: ["Pondelok", "Utorok", "Streda", "Štvrtok", "Piatok", "Sobota", "Nedeľa"], shortDays: ["PO", "UT", "ST", "ŠT", "PI", "SO", "NE"] }
+    const normalizeLang = (lang) => (lang || "").toLowerCase();
+
+    const resolvePreferredLang = (languages, fallback) => {
+      const userLang = normalizeLang(navigator.language || navigator.userLanguage);
+      const userBase = userLang.split("-")[0];
+      const matchLang = (code) => languages.find((lang) => normalizeLang(lang.code) === normalizeLang(code));
+      return (matchLang(userLang) || matchLang(userBase) || matchLang(fallback) || languages[0] || { code: fallback || "en" }).code;
+    };
+
+    const LanguagePicker = ({ languages, current, onChange, label }) => {
+      const [open, setOpen] = useState(false);
+      const containerRef = useRef(null);
+
+      useEffect(() => {
+        const handleClick = (event) => {
+          if (containerRef.current && !containerRef.current.contains(event.target)) {
+            setOpen(false);
+          }
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+      }, []);
+
+      const selected = languages.find((lang) => lang.code === current) || languages[0];
+      const selectedLabel = selected ? `${selected.flag ? `${selected.flag} ` : ""}${selected.label}` : current;
+
+      return (
+        <div ref={containerRef} className="relative">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500">{label}</span>
+            <button
+              type="button"
+              onClick={() => setOpen((prev) => !prev)}
+              className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 transition"
+            >
+              <span className="truncate max-w-[120px] sm:max-w-[160px]">{selectedLabel}</span>
+              <Icon name="chevron-down" className="w-4 h-4" />
+            </button>
+          </div>
+          {open && (
+            <div className="absolute right-0 mt-2 w-60 max-h-64 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg z-50">
+              {languages.map((lang) => {
+                const optionLabel = `${lang.flag ? `${lang.flag} ` : ""}${lang.label}`;
+                const isActive = lang.code === current;
+                return (
+                  <button
+                    key={lang.code}
+                    type="button"
+                    onClick={() => {
+                      onChange(lang.code);
+                      setOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm transition ${isActive ? "bg-slate-100 text-blue-600" : "text-slate-700 hover:bg-slate-50"}`}
+                  >
+                    {optionLabel}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
     };
 
     function App() {
       const [view, setView] = useState('settings');
       const [isDownloading, setIsDownloading] = useState(false);
+      const [languages, setLanguages] = useState([]);
       const [appLang, setAppLang] = useState('en');
+      const [fallbackLang, setFallbackLang] = useState('en');
+      const [ui, setUi] = useState(null);
 
       const [config, setConfig] = useState({
-        orientation: 'landscape', startYear: new Date().getFullYear(), startMonth: 8, durationMonths: 10, periodsCount: 8, calendarTool: 'google', strings: presets.en,
+        orientation: 'landscape', startYear: new Date().getFullYear(), startMonth: 8, durationMonths: 10, periodsCount: 8, calendarTool: 'google', strings: EMPTY_PRESETS,
         trackerCounts: { vacation1: 45, vacation2: 45, doctor: 7, family: 7, sick1: 2, sick2: 2, nv: 1 } // nv is used just as a boolean toggle (0 or >0)
       });
 
       useEffect(() => {
-        const userLang = navigator.language || navigator.userLanguage;
-        if (userLang && (userLang.startsWith('sk') || userLang.startsWith('cs'))) {
-          setAppLang('sk'); setConfig(prev => ({ ...prev, strings: presets.sk }));
-        }
+        let isActive = true;
+        const loadIndex = async () => {
+          try {
+            const res = await fetch('/strings/index.json', { cache: 'no-store' });
+            if (!res.ok) throw new Error('Failed to load language index');
+            const data = await res.json();
+            if (!isActive) return;
+            const available = Array.isArray(data.languages) ? data.languages : [];
+            const defaultLang = data.default || 'en';
+            setFallbackLang(defaultLang);
+            setLanguages(available);
+            const preferred = resolvePreferredLang(available, defaultLang);
+            await loadLanguage(preferred, available, defaultLang);
+          } catch (err) {
+            console.error('Failed to load language index', err);
+            const fallbackList = [{ code: 'en', label: 'English', dir: 'ltr' }];
+            setFallbackLang('en');
+            setLanguages(fallbackList);
+            await loadLanguage('en', fallbackList, 'en');
+          }
+        };
+        loadIndex();
+        return () => {
+          isActive = false;
+        };
       }, []);
 
-      const ui = dictionaries[appLang];
-      const changeAppLang = (lang) => { setAppLang(lang); setConfig(prev => ({ ...prev, strings: presets[lang] })); };
+      const applyLanguage = (langCode, languageData, langMeta) => {
+        setAppLang(langCode);
+        setUi(languageData.ui);
+        setConfig(prev => ({ ...prev, strings: languageData.presets }));
+        const dir = langMeta?.dir || 'ltr';
+        document.documentElement.lang = langCode;
+        document.documentElement.dir = dir;
+      };
+
+      const loadLanguage = async (langCode, availableLanguages, fallbackCode) => {
+        const requestedCode = langCode || fallbackCode || 'en';
+        const meta = availableLanguages.find((lang) => normalizeLang(lang.code) === normalizeLang(requestedCode));
+        const fileCode = meta?.code || requestedCode;
+        const normalizedFileCode = normalizeLang(fileCode);
+        const normalizedFallback = normalizeLang(fallbackCode || 'en');
+        try {
+          const res = await fetch(`/strings/${fileCode}.json`, { cache: 'no-store' });
+          if (!res.ok) throw new Error(`Failed to load language file ${fileCode}`);
+          const data = await res.json();
+          if (!data.ui || !data.presets) throw new Error(`Invalid language file ${fileCode}`);
+          applyLanguage(fileCode, data, meta);
+          return true;
+        } catch (err) {
+          console.error(`Failed to load language ${fileCode}`, err);
+          if (fallbackCode && normalizedFileCode !== normalizedFallback) {
+            return loadLanguage(fallbackCode, availableLanguages, fallbackCode);
+          }
+          if (normalizedFileCode !== 'en') {
+            return loadLanguage('en', availableLanguages, 'en');
+          }
+          return false;
+        }
+      };
+
+      const changeAppLang = (lang) => {
+        loadLanguage(lang, languages, fallbackLang);
+      };
+
+      if (!ui) {
+        return (
+          <div className="min-h-[60vh] flex items-center justify-center text-slate-500 text-sm font-semibold">
+            Loading translations...
+          </div>
+        );
+      }
 
       const handleDownloadPdf = async () => {
         setIsDownloading(true);
@@ -209,10 +352,14 @@
                 <h1 className="font-bold text-lg tracking-tight">{ui.appTitle}</h1>
               </div>
               <div className="flex gap-3 items-center">
-                {view === 'settings' && (
-                  <div className="flex items-center gap-2 mr-6 bg-slate-100 p-1 rounded-lg">
-                    <button onClick={() => changeAppLang('en')} className={`px-3 py-1 rounded-md text-xs font-bold transition ${appLang === 'en' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>EN</button>
-                    <button onClick={() => changeAppLang('sk')} className={`px-3 py-1 rounded-md text-xs font-bold transition ${appLang === 'sk' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>SK</button>
+                {view === 'settings' && languages.length > 0 && (
+                  <div className="mr-6">
+                    <LanguagePicker
+                      languages={languages}
+                      current={appLang}
+                      onChange={changeAppLang}
+                      label={ui.langToggleMsg}
+                    />
                   </div>
                 )}
                 {view === 'preview' && (<button onClick={() => setView('settings')} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"><Icon name="settings" className="w-4 h-4" /> {ui.btnSettings}</button>)}
