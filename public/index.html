@@ -164,31 +164,129 @@
       cal: c.calendarTool === 'apple' ? `calshow:${Math.floor(d.getTime() / 1000)}` : `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Event&dates=${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T080000Z/${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T090000Z`
     });
 
-    const EMPTY_PRESETS = {
-      title: "",
-      todo: "",
-      notes: "",
-      prep: "",
-      week: "",
-      evenWeek: "",
-      oddWeek: "",
-      trackerTitle: "",
-      vacation1: "",
-      vacation2: "",
-      doctor: "",
-      family: "",
-      sick1: "",
-      sick2: "",
-      nv: "",
-      months: Array(12).fill(""),
-      shortMonths: Array(12).fill(""),
-      days: Array(7).fill(""),
-      shortDays: Array(7).fill("")
+    const FALLBACK_TRANSLATIONS = {
+      ui: {
+        appTitle: "Digital Planner",
+        btnSettings: "Settings",
+        btnGenerate: "Preview",
+        btnSave: "Download PDF",
+        btnGenerating: "Generating PDF...",
+        pdfError: "Failed to generate PDF: ",
+        serverError: "Server error - check the Docker logs.",
+        langToggleMsg: "Language:",
+        secLayout: "Layout",
+        secLayoutDesc: "Choose orientation.",
+        optLandscape: "Landscape",
+        optLandscapeDesc: "For Apple Pencil",
+        optPortrait: "Portrait",
+        optPortraitDesc: "Notebook style",
+        secCalendar: "Dates",
+        lblStartYear: "Start Year",
+        lblStartMonth: "Start Month",
+        lblDuration: "Duration",
+        opt10Months: "10 Months",
+        opt12Months: "12 Months",
+        lblPeriods: "Rows/Day",
+        secIntegrations: "Integrations",
+        lblCalendarTool: "Calendar App",
+        secStrings: "Text Customization",
+        secStringsDesc: "Edit all words.",
+        subMainTexts: "Main Texts",
+        subDays: "Days",
+        subMonths: "Months",
+        lblFull: "Full Name",
+        lblShort: "Short",
+        lblEvenWeek: "Even Week",
+        lblOddWeek: "Odd Week",
+        secTracker: "Leave Tracker & Limits",
+        trackerNote: "If you set a value to 0, it won't be generated in the planner.",
+        trackerTitleLabel: "Page Title",
+        trackerVacationLabel: "Vacation",
+        trackerDoctorLabel: "Doctor",
+        trackerFamilyLabel: "Family Care",
+        trackerSick1Label: "Sick Days (1st Term)",
+        trackerSick2Label: "Sick Days (2nd Term)",
+        trackerNvLabel: "Comp Time (Title)",
+        trackerNvToggleLabel: "Show (0/1)",
+        lblCount: "Boxes",
+        lblTitle: "Title",
+        lblTodo: "To-Do",
+        lblNotes: "Notes",
+        lblPrep: "Lesson Prep"
+      },
+      presets: {
+        title: "Teacher's Planner",
+        todo: "To-Do List",
+        notes: "Notes",
+        prep: "Prep",
+        week: "Week",
+        evenWeek: "Even Week",
+        oddWeek: "Odd Week",
+        trackerTitle: "Absence & Leave Tracker",
+        vacation1: "Vacation",
+        vacation2: "Vacation",
+        doctor: "Doctor / Medical",
+        family: "Family Care",
+        sick1: "Sick Days (1st Term)",
+        sick2: "Sick Days (2nd Term)",
+        nv: "Comp Time (Hours)",
+        months: [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December"
+        ],
+        shortMonths: [
+          "JAN",
+          "FEB",
+          "MAR",
+          "APR",
+          "MAY",
+          "JUN",
+          "JUL",
+          "AUG",
+          "SEP",
+          "OCT",
+          "NOV",
+          "DEC"
+        ],
+        days: [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ],
+        shortDays: [
+          "MON",
+          "TUE",
+          "WED",
+          "THU",
+          "FRI",
+          "SAT",
+          "SUN"
+        ]
+      }
     };
 
     const DEFAULT_FALLBACK_LANG = 'en';
     const normalizeLanguageCode = (lang) => (typeof lang === 'string' ? lang : "").toLowerCase();
     const isSafeLanguageCode = (code) => /^[A-Za-z0-9-]+$/.test(code);
+    const assertLanguageCode = (code, label) => {
+      if (!isSafeLanguageCode(code)) {
+        throw new Error(`Invalid ${label} language code '${code}'. Only letters, numbers, and hyphens are allowed.`);
+      }
+    };
 
     const resolvePreferredLang = (languages, fallback) => {
       const userLang = normalizeLanguageCode(navigator.language);
@@ -267,10 +365,10 @@
       const [languages, setLanguages] = useState([]);
       const [appLang, setAppLang] = useState(DEFAULT_FALLBACK_LANG);
       const [fallbackLang, setFallbackLang] = useState(DEFAULT_FALLBACK_LANG);
-      const [ui, setUi] = useState(null);
+      const [ui, setUi] = useState(FALLBACK_TRANSLATIONS.ui);
 
       const [config, setConfig] = useState({
-        orientation: 'landscape', startYear: new Date().getFullYear(), startMonth: 8, durationMonths: 10, periodsCount: 8, calendarTool: 'google', strings: EMPTY_PRESETS,
+        orientation: 'landscape', startYear: new Date().getFullYear(), startMonth: 8, durationMonths: 10, periodsCount: 8, calendarTool: 'google', strings: FALLBACK_TRANSLATIONS.presets,
         trackerCounts: { vacation1: 45, vacation2: 45, doctor: 7, family: 7, sick1: 2, sick2: 2, nv: 1 } // nv is used just as a boolean toggle (0 or >0)
       });
 
@@ -318,12 +416,8 @@
         const normalizedFileCode = normalizeLanguageCode(fileCode);
         const normalizedFallback = fallbackCode ? normalizeLanguageCode(fallbackCode) : null;
         try {
-          if (!isSafeLanguageCode(requestedCode)) {
-            throw new Error(`Invalid language code '${requestedCode}'. Only letters, numbers, and hyphens are allowed.`);
-          }
-          if (!isSafeLanguageCode(fileCode)) {
-            throw new Error(`Invalid language code '${fileCode}'. Only letters, numbers, and hyphens are allowed.`);
-          }
+          assertLanguageCode(requestedCode, 'requested');
+          assertLanguageCode(fileCode, 'resolved');
           const res = await fetch(`/strings/${fileCode}.json`);
           if (!res.ok) throw new Error(`Failed to load language file ${fileCode}`);
           const data = await res.json();
@@ -345,14 +439,6 @@
       const changeAppLang = (lang) => {
         loadLanguage(lang, languages, fallbackLang);
       };
-
-      if (!ui) {
-        return (
-          <div className="min-h-[60vh] flex items-center justify-center text-slate-500 text-sm font-semibold">
-            Loading translations...
-          </div>
-        );
-      }
 
       const handleDownloadPdf = async () => {
         setIsDownloading(true);
@@ -496,6 +582,12 @@
             <div className="grid grid-cols-2 gap-2">
               {config.strings.months.map((m, i) => (
                 <div key={i} className="flex gap-2"><input type="text" value={m} onChange={e => uA('months', i, e.target.value)} className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" /><input type="text" value={config.strings.shortMonths[i]} onChange={e => uA('shortMonths', i, e.target.value)} className="w-16 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center" /></div>
+              ))}
+            </div>
+            <h4 className="text-sm font-bold mt-6 mb-2">{ui.subDays}</h4>
+            <div className="grid grid-cols-2 gap-2">
+              {config.strings.days.map((d, i) => (
+                <div key={i} className="flex gap-2"><input type="text" value={d} onChange={e => uA('days', i, e.target.value)} className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" /><input type="text" value={config.strings.shortDays[i]} onChange={e => uA('shortDays', i, e.target.value)} className="w-16 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center" /></div>
               ))}
             </div>
           </div>
