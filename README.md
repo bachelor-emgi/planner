@@ -38,15 +38,3 @@ That is why **Teacher Planner is 100% free.**
 * No premium subscriptions.
 * No locked features. 
 * Just a clean, distraction-free tool to make your life easier.
-
----
-
-## ☕ Support the Project
-
-This planner is a passion project built by a teacher, for the teaching community. If you find this tool helpful, if it saves you precious time during a chaotic school week, or if you simply want to support the ongoing development and server hosting costs, you can buy me a coffee. 
-
-Any contribution is deeply appreciated and directly helps keep the servers running for everyone!
-
-[![Buy Me A Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://buymeacoffee.com/emgi2)
-
-*(Or visit directly: [buymeacoffee.com/emgi2](https://buymeacoffee.com/emgi2))*
