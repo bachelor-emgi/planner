@@ -149,8 +149,8 @@
     });
 
     const dictionaries = {
-      en: { appTitle: "Digital Planner", btnSettings: "Settings", btnGenerate: "Preview", btnSave: "Download PDF", langToggleMsg: "Language:", secLayout: "Layout", secLayoutDesc: "Choose orientation.", optLandscape: "Landscape", optLandscapeDesc: "For Apple Pencil", optPortrait: "Portrait", optPortraitDesc: "Notebook style", secCalendar: "Dates", lblStartYear: "Start Year", lblStartMonth: "Start Month", lblDuration: "Duration", opt10Months: "10 Months", opt12Months: "12 Months", lblPeriods: "Rows/Day", secIntegrations: "Integrations", lblCalendarTool: "Calendar App", secStrings: "Text Customization", secStringsDesc: "Edit all words.", subMainTexts: "Main Texts", subDays: "Days", subMonths: "Months", lblFull: "Full Name", lblShort: "Short", lblEvenWeek: "Even Week", lblOddWeek: "Odd Week", secTracker: "Leave Tracker & Limits", lblCount: "Boxes" },
-      sk: { appTitle: "Digital Planner", btnSettings: "Nastavenia", btnGenerate: "Náhľad", btnSave: "Stiahnuť PDF", langToggleMsg: "Jazyk:", secLayout: "Formát", secLayoutDesc: "Vyberte si orientáciu.", optLandscape: "Na šírku", optLandscapeDesc: "Pre Apple Pencil", optPortrait: "Na výšku", optPortraitDesc: "Klasický blok", secCalendar: "Dátumy", lblStartYear: "Rok", lblStartMonth: "Mesiac", lblDuration: "Trvanie", opt10Months: "10 Mes.", opt12Months: "12 Mes.", lblPeriods: "Riadky/Deň", secIntegrations: "Integrácie", lblCalendarTool: "Kalendár", secStrings: "Texty", secStringsDesc: "Upravte si slová.", subMainTexts: "Hlavné texty", subDays: "Dni", subMonths: "Mesiace", lblFull: "Názov", lblShort: "Skratka", lblEvenWeek: "Párny týždeň", lblOddWeek: "Nepárny týždeň", secTracker: "Prehľad Voľna (Počty políčok)", lblCount: "Počet" }
+      en: { appTitle: "Digital Planner", btnSettings: "Settings", btnGenerate: "Preview", btnSave: "Download PDF", btnGenerating: "Generating PDF...", pdfError: "Failed to generate PDF: ", serverError: "Server error - check the Docker logs.", langToggleMsg: "Language:", secLayout: "Layout", secLayoutDesc: "Choose orientation.", optLandscape: "Landscape", optLandscapeDesc: "For Apple Pencil", optPortrait: "Portrait", optPortraitDesc: "Notebook style", secCalendar: "Dates", lblStartYear: "Start Year", lblStartMonth: "Start Month", lblDuration: "Duration", opt10Months: "10 Months", opt12Months: "12 Months", lblPeriods: "Rows/Day", secIntegrations: "Integrations", lblCalendarTool: "Calendar App", secStrings: "Text Customization", secStringsDesc: "Edit all words.", subMainTexts: "Main Texts", subDays: "Days", subMonths: "Months", lblFull: "Full Name", lblShort: "Short", lblEvenWeek: "Even Week", lblOddWeek: "Odd Week", secTracker: "Leave Tracker & Limits", trackerNote: "If you set a value to 0, it won't be generated in the planner.", trackerTitleLabel: "Page Title", trackerVacationLabel: "Vacation", trackerDoctorLabel: "Doctor", trackerFamilyLabel: "Family Care", trackerSick1Label: "Sick Days (1st Term)", trackerSick2Label: "Sick Days (2nd Term)", trackerNvLabel: "Comp Time (Title)", trackerNvToggleLabel: "Show (0/1)", lblCount: "Boxes", lblTitle: "Title", lblTodo: "To-Do", lblNotes: "Notes", lblPrep: "Lesson Prep" },
+      sk: { appTitle: "Digital Planner", btnSettings: "Nastavenia", btnGenerate: "Náhľad", btnSave: "Stiahnuť PDF", btnGenerating: "Generujem PDF...", pdfError: "Nepodarilo sa vygenerovať PDF: ", serverError: "Chyba servera - Skontrolujte logy Dockeru.", langToggleMsg: "Jazyk:", secLayout: "Formát", secLayoutDesc: "Vyberte si orientáciu.", optLandscape: "Na šírku", optLandscapeDesc: "Pre Apple Pencil", optPortrait: "Na výšku", optPortraitDesc: "Klasický blok", secCalendar: "Dátumy", lblStartYear: "Rok", lblStartMonth: "Mesiac", lblDuration: "Trvanie", opt10Months: "10 Mes.", opt12Months: "12 Mes.", lblPeriods: "Riadky/Deň", secIntegrations: "Integrácie", lblCalendarTool: "Kalendár", secStrings: "Texty", secStringsDesc: "Upravte si slová.", subMainTexts: "Hlavné texty", subDays: "Dni", subMonths: "Mesiace", lblFull: "Názov", lblShort: "Skratka", lblEvenWeek: "Párny týždeň", lblOddWeek: "Nepárny týždeň", secTracker: "Prehľad Voľna (Počty políčok)", trackerNote: "Ak pre položku nastavíte hodnotu 0, nevygeneruje sa v diári.", trackerTitleLabel: "Nadpis Strany", trackerVacationLabel: "Dovolenka", trackerDoctorLabel: "Lekár", trackerFamilyLabel: "OČR", trackerSick1Label: "Sick Days (1. Polrok)", trackerSick2Label: "Sick Days (2. Polrok)", trackerNvLabel: "Náhradné voľno (Nadpis)", trackerNvToggleLabel: "Zobraziť (0/1)", lblCount: "Počet", lblTitle: "Názov", lblTodo: "Úlohy", lblNotes: "Poznámky", lblPrep: "Príprava" }
     };
 
     const presets = {
@@ -186,7 +186,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config)
           });
-          if (!res.ok) throw new Error("Chyba servera - Skontrolujte logy Dockeru");
+          if (!res.ok) throw new Error(ui.serverError);
           const blob = await res.blob();
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -194,7 +194,7 @@
           a.download = `${config.strings.title.replace(/\s+/g, '_')}.pdf`;
           a.click();
         } catch (err) {
-          alert("Nepodarilo sa vygenerovať PDF: " + err.message);
+          alert(`${ui.pdfError}${err.message}`);
         } finally {
           setIsDownloading(false);
         }
@@ -219,7 +219,7 @@
                 {view === 'settings' && (<button onClick={() => setView('preview')} className="flex items-center gap-2 px-6 py-2 bg-slate-200 text-slate-800 text-sm font-bold rounded-xl hover:bg-slate-300 transition"><Icon name="eye" className="w-4 h-4" /> {ui.btnGenerate}</button>)}
                 <button onClick={handleDownloadPdf} disabled={isDownloading} className={`flex items-center gap-2 px-6 py-2 text-white text-sm font-bold rounded-xl transition shadow-md ${isDownloading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>
                   <Icon name={isDownloading ? "loader-2" : "download"} className={`w-4 h-4 ${isDownloading ? 'animate-spin' : ''}`} />
-                  {isDownloading ? "Generujem PDF..." : ui.btnSave}
+                  {isDownloading ? ui.btnGenerating : ui.btnSave}
                 </button>
               </div>
             </div>
@@ -265,38 +265,38 @@
             {/* SETTINGS PRE TRACKER */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <h3 className="text-lg font-bold mb-2">{ui.secTracker}</h3>
-              <p className="text-xs text-slate-500 mb-4">Ak pre položku nastavíte hodnotu 0, nevygeneruje sa v diári.</p>
+              <p className="text-xs text-slate-500 mb-4">{ui.trackerNote}</p>
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Nadpis Strany</label><input type="text" value={config.strings.trackerTitle} onChange={e => uS('trackerTitle', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerTitleLabel}</label><input type="text" value={config.strings.trackerTitle} onChange={e => uS('trackerTitle', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Dovolenka ({config.startYear})</label><input type="text" value={config.strings.vacation1} onChange={e => uS('vacation1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerVacationLabel} ({config.startYear})</label><input type="text" value={config.strings.vacation1} onChange={e => uS('vacation1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                   <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.vacation1} onChange={e => uTC('vacation1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Dovolenka ({config.startYear + 1})</label><input type="text" value={config.strings.vacation2} onChange={e => uS('vacation2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerVacationLabel} ({config.startYear + 1})</label><input type="text" value={config.strings.vacation2} onChange={e => uS('vacation2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                   <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.vacation2} onChange={e => uTC('vacation2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Lekár</label><input type="text" value={config.strings.doctor} onChange={e => uS('doctor', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerDoctorLabel}</label><input type="text" value={config.strings.doctor} onChange={e => uS('doctor', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                   <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.doctor} onChange={e => uTC('doctor', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">OČR</label><input type="text" value={config.strings.family} onChange={e => uS('family', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerFamilyLabel}</label><input type="text" value={config.strings.family} onChange={e => uS('family', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                   <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.family} onChange={e => uTC('family', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Sick Days (1. Polrok)</label><input type="text" value={config.strings.sick1} onChange={e => uS('sick1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerSick1Label}</label><input type="text" value={config.strings.sick1} onChange={e => uS('sick1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                   <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.sick1} onChange={e => uTC('sick1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Sick Days (2. Polrok)</label><input type="text" value={config.strings.sick2} onChange={e => uS('sick2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerSick2Label}</label><input type="text" value={config.strings.sick2} onChange={e => uS('sick2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                   <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.sick2} onChange={e => uTC('sick2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Náhradné voľno (Nadpis)</label><input type="text" value={config.strings.nv} onChange={e => uS('nv', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
-                  <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">Zobraziť (0/1)</label><input type="number" value={config.trackerCounts.nv} onChange={e => uTC('nv', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerNvLabel}</label><input type="text" value={config.strings.nv} onChange={e => uS('nv', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerNvToggleLabel}</label><input type="number" value={config.trackerCounts.nv} onChange={e => uTC('nv', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
               </div>
             </div>
@@ -304,15 +304,15 @@
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
             <h3 className="text-2xl font-bold mb-4">{ui.secStrings}</h3>
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">Title</label><input type="text" value={config.strings.title} onChange={e => uS('title', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
-              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">To-Do</label><input type="text" value={config.strings.todo} onChange={e => uS('todo', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
-              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">Notes</label><input type="text" value={config.strings.notes} onChange={e => uS('notes', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
-              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">Lesson Prep</label><input type="text" value={config.strings.prep} onChange={e => uS('prep', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblTitle}</label><input type="text" value={config.strings.title} onChange={e => uS('title', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblTodo}</label><input type="text" value={config.strings.todo} onChange={e => uS('todo', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblNotes}</label><input type="text" value={config.strings.notes} onChange={e => uS('notes', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblPrep}</label><input type="text" value={config.strings.prep} onChange={e => uS('prep', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
 
               <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblEvenWeek}</label><input type="text" value={config.strings.evenWeek} onChange={e => uS('evenWeek', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
               <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblOddWeek}</label><input type="text" value={config.strings.oddWeek} onChange={e => uS('oddWeek', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
             </div>
-            <h4 className="text-sm font-bold mb-2">Mesiace</h4>
+            <h4 className="text-sm font-bold mb-2">{ui.subMonths}</h4>
             <div className="grid grid-cols-2 gap-2">
               {config.strings.months.map((m, i) => (
                 <div key={i} className="flex gap-2"><input type="text" value={m} onChange={e => uA('months', i, e.target.value)} className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" /><input type="text" value={config.strings.shortMonths[i]} onChange={e => uA('shortMonths', i, e.target.value)} className="w-16 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center" /></div>
