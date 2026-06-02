@@ -171,7 +171,7 @@
     };
 
     const DEFAULT_FALLBACK_LANG = 'en';
-    const normalizeLanguageCode = (lang) => (lang || "").toLowerCase();
+    const normalizeLanguageCode = (lang) => (typeof lang === 'string' ? lang : "").toLowerCase();
     const isSafeLanguageCode = (code) => /^[A-Za-z0-9-]+$/.test(code);
 
     const resolvePreferredLang = (languages, fallback) => {
@@ -206,9 +206,10 @@
               type="button"
               onClick={() => setOpen((prev) => !prev)}
               title={selectedLabel}
+              aria-label={selectedLabel}
               className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 transition"
             >
-              <span className="truncate max-w-[120px] sm:max-w-[160px]">{selectedLabel}</span>
+              <span title={selectedLabel} className="truncate max-w-[120px] sm:max-w-[160px]">{selectedLabel}</span>
               <Icon name="chevron-down" className="w-4 h-4" />
             </button>
           </div>
@@ -292,7 +293,7 @@
         const meta = availableLanguages.find((lang) => normalizeLanguageCode(lang.code) === normalizeLanguageCode(requestedCode));
         const fileCode = meta?.code || requestedCode;
         if (!isSafeLanguageCode(fileCode)) {
-          throw new Error(`Invalid language code ${fileCode}`);
+          throw new Error(`Invalid language code '${fileCode}'. Only letters, numbers, and hyphens are allowed.`);
         }
         const normalizedFileCode = normalizeLanguageCode(fileCode);
         const normalizedFallback = fallbackCode ? normalizeLanguageCode(fallbackCode) : null;
