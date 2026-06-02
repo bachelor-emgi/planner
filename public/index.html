@@ -5,7 +5,29 @@
   <meta charset="UTF-8">
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Digital Planner</title>
+  <!-- Základné SEO -->
+  <title>Teacher Planner | Free Digital Organizer for Educators</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <meta name="description"
+    content="A completely free digital planner to simplify teachers' daily tasks. Originally built for Slovak schools, adaptable for educators worldwide.">
+  <meta name="keywords"
+    content="teacher planner, free lesson planner, učiteľský diár, plánovač pre učiteľov, digital gradebook, school organizer, teacher tools">
+  <meta name="author" content="emgi2">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://teacherplanner.eu/">
+  <meta property="og:title" content="Teacher Planner | Free Digital Organizer">
+  <meta property="og:description"
+    content="Simplify your teaching workflow with this free planner. Created by a teacher, for teachers.">
+  <meta property="og:image" content="https://teacherplanner.eu/android-chrome-512x512.png">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Teacher Planner | Free Digital Organizer">
+  <meta name="twitter:description"
+    content="A free, intuitive digital planner built to simplify daily tasks for teachers.">
+  <meta name="twitter:image" content="https://teacherplanner.eu/android-chrome-512x512.png">
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -111,7 +133,8 @@
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
         </path>
       </svg>
-      <h2 id="loading-text" style="font-family: sans-serif; color: #4B5563; font-weight: bold;">Loading Planner OS...</h2>
+      <h2 id="loading-text" style="font-family: sans-serif; color: #4B5563; font-weight: bold;">Loading Planner OS...
+      </h2>
     </div>
   </div>
 
@@ -212,7 +235,14 @@
         lblTitle: "Title",
         lblTodo: "To-Do",
         lblNotes: "Notes",
-        lblPrep: "Lesson Prep"
+        lblPrep: "Lesson Prep",
+        navGithub: "GitHub",
+        navCoffee: "Buy Me a Coffee",
+        supportTitle: "Support this Project",
+        supportDesc: "This digital teacher planner is open-source and completely free. If it helps you save time, please consider supporting its future development by buying a coffee or contributing on GitHub.",
+        btnCoffee: "Buy me a coffee",
+        btnGithub: "GitHub Repository",
+        footerText: "Teacher Planner. Developed with ❤️ by"
       },
       presets: {
         title: "Teacher's Planner",
@@ -470,11 +500,32 @@
 
       return (
         <div>
+          {}
           <div className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 shadow-sm print:hidden">
             <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center"><Icon name="pen-line" className="text-white w-4 h-4" /></div>
-                <h1 className="font-bold text-lg tracking-tight">{ui.appTitle}</h1>
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <Icon name="pen-line" className="text-white w-4 h-4" />
+                </div>
+                <div>
+                  <h1 className="font-bold text-lg tracking-tight leading-none mb-0.5">{ui.appTitle}</h1>
+                  <p className="text-[10px] text-slate-400 font-medium hidden sm:block">by emgi2</p>
+                </div>
+                
+                {/* Rýchle prepojenia na GitHub a Coffee na desktope */}
+                <div className="hidden lg:flex items-center gap-4 ml-6 pl-6 border-l border-slate-200">
+                  <a href="https://github.com/bachelor-emgi/planner" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors">
+                    {}
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                    </svg>
+                    <span>{ui.navGithub}</span>
+                  </a>
+                  <a href="https://buymeacoffee.com/emgi2" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-amber-600 transition-colors">
+                    <Icon name="coffee" className="w-4 h-4 text-amber-500 fill-amber-500/20" />
+                    <span>{ui.navCoffee}</span>
+                  </a>
+                </div>
               </div>
               <div className="flex gap-3 items-center">
                 {view === 'settings' && languages.length > 0 && (
@@ -596,6 +647,50 @@
                 <div key={i} className="flex gap-2"><input type="text" value={d} onChange={e => uA('days', i, e.target.value)} className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" /><input type="text" value={config.strings.shortDays[i]} onChange={e => uA('shortDays', i, e.target.value)} className="w-16 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center" /></div>
               ))}
             </div>
+          </div>
+
+          {}
+          <div className="bg-gradient-to-br from-blue-50/60 via-indigo-50/40 to-slate-50/80 p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+            <div className="absolute right-0 bottom-0 opacity-5 pointer-events-none transform translate-x-4 translate-y-4">
+              <Icon name="heart" className="w-40 h-40 text-blue-600" />
+            </div>
+            <div className="relative z-10">
+              <h3 className="text-lg font-extrabold text-slate-800 mb-2 flex items-center gap-2">
+                <Icon name="heart" className="text-rose-500 w-5 h-5 fill-rose-500 animate-pulse" />
+                {ui.supportTitle}
+              </h3>
+              <p className="text-sm text-slate-600 mb-4 leading-relaxed max-w-2xl">
+                {ui.supportDesc}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href="https://buymeacoffee.com/emgi2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#FFDD00] text-black font-extrabold text-sm rounded-xl hover:bg-[#ffea3b] active:scale-95 transition-all shadow-sm hover:shadow-md"
+                >
+                  <Icon name="coffee" className="w-4 h-4 text-black fill-black/20" />
+                  <span>{ui.btnCoffee}</span>
+                </a>
+                <a
+                  href="https://github.com/bachelor-emgi/planner"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white font-bold text-sm rounded-xl hover:bg-slate-900 active:scale-95 transition-all shadow-sm hover:shadow-md"
+                >
+                  {}
+                  <svg className="w-4 h-4 fill-current text-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                  </svg>
+                  <span>{ui.btnGithub}</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Pätička pre informácie o autorovi */}
+          <div className="text-center text-xs text-slate-400 mt-4 pt-4 border-t border-slate-200">
+            <p>© {new Date().getFullYear()} {ui.footerText} <a href="https://github.com/bachelor-emgi/planner" target="_blank" rel="noopener noreferrer" className="font-bold hover:underline hover:text-slate-600">emgi2</a>.</p>
           </div>
         </div>
       );
