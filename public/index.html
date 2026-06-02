@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="sk">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
@@ -111,12 +111,28 @@
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
         </path>
       </svg>
-      <h2 style="font-family: sans-serif; color: #4B5563; font-weight: bold;">Načítavam Planner OS...</h2>
+      <h2 id="loading-text" style="font-family: sans-serif; color: #4B5563; font-weight: bold;">Loading Planner OS...</h2>
     </div>
   </div>
 
+  <script>
+    (function () {
+      const loadingMessages = {
+        en: "Loading Planner OS...",
+        sk: "Načítavam Planner OS..."
+      };
+      const rawLang = navigator.language || "";
+      const userLang = rawLang.toLowerCase();
+      const langKey = userLang.startsWith("sk") || userLang.startsWith("cs") ? "sk" : "en";
+      const loadingEl = document.getElementById("loading-text");
+      if (loadingEl) {
+        loadingEl.textContent = loadingMessages[langKey] || loadingMessages.en;
+      }
+    })();
+  </script>
+
   <script type="text/babel" data-type="module">
-    const { useState, useEffect, useMemo } = React;
+    const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
     const Icon = ({ name, className }) => {
       useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [name]);
@@ -148,35 +164,287 @@
       cal: c.calendarTool === 'apple' ? `calshow:${Math.floor(d.getTime() / 1000)}` : `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Event&dates=${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T080000Z/${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}T090000Z`
     });
 
-    const dictionaries = {
-      en: { appTitle: "Digital Planner", btnSettings: "Settings", btnGenerate: "Preview", btnSave: "Download PDF", langToggleMsg: "Language:", secLayout: "Layout", secLayoutDesc: "Choose orientation.", optLandscape: "Landscape", optLandscapeDesc: "For Apple Pencil", optPortrait: "Portrait", optPortraitDesc: "Notebook style", secCalendar: "Dates", lblStartYear: "Start Year", lblStartMonth: "Start Month", lblDuration: "Duration", opt10Months: "10 Months", opt12Months: "12 Months", lblPeriods: "Rows/Day", secIntegrations: "Integrations", lblCalendarTool: "Calendar App", secStrings: "Text Customization", secStringsDesc: "Edit all words.", subMainTexts: "Main Texts", subDays: "Days", subMonths: "Months", lblFull: "Full Name", lblShort: "Short", lblEvenWeek: "Even Week", lblOddWeek: "Odd Week", secTracker: "Leave Tracker & Limits", lblCount: "Boxes" },
-      sk: { appTitle: "Digital Planner", btnSettings: "Nastavenia", btnGenerate: "Náhľad", btnSave: "Stiahnuť PDF", langToggleMsg: "Jazyk:", secLayout: "Formát", secLayoutDesc: "Vyberte si orientáciu.", optLandscape: "Na šírku", optLandscapeDesc: "Pre Apple Pencil", optPortrait: "Na výšku", optPortraitDesc: "Klasický blok", secCalendar: "Dátumy", lblStartYear: "Rok", lblStartMonth: "Mesiac", lblDuration: "Trvanie", opt10Months: "10 Mes.", opt12Months: "12 Mes.", lblPeriods: "Riadky/Deň", secIntegrations: "Integrácie", lblCalendarTool: "Kalendár", secStrings: "Texty", secStringsDesc: "Upravte si slová.", subMainTexts: "Hlavné texty", subDays: "Dni", subMonths: "Mesiace", lblFull: "Názov", lblShort: "Skratka", lblEvenWeek: "Párny týždeň", lblOddWeek: "Nepárny týždeň", secTracker: "Prehľad Voľna (Počty políčok)", lblCount: "Počet" }
+    const FALLBACK_TRANSLATIONS = {
+      ui: {
+        appTitle: "Digital Planner",
+        btnSettings: "Settings",
+        btnGenerate: "Preview",
+        btnSave: "Download PDF",
+        btnGenerating: "Generating PDF...",
+        pdfError: "Failed to generate PDF: ",
+        serverError: "Server error - check the Docker logs.",
+        langToggleMsg: "Language:",
+        secLayout: "Layout",
+        secLayoutDesc: "Choose orientation.",
+        optLandscape: "Landscape",
+        optLandscapeDesc: "For Apple Pencil",
+        optPortrait: "Portrait",
+        optPortraitDesc: "Notebook style",
+        secCalendar: "Dates",
+        lblStartYear: "Start Year",
+        lblStartMonth: "Start Month",
+        lblDuration: "Duration",
+        opt10Months: "10 Months",
+        opt12Months: "12 Months",
+        lblPeriods: "Rows/Day",
+        secIntegrations: "Integrations",
+        lblCalendarTool: "Calendar App",
+        secStrings: "Text Customization",
+        secStringsDesc: "Edit all words.",
+        subMainTexts: "Main Texts",
+        subDays: "Days",
+        subMonths: "Months",
+        lblFull: "Full Name",
+        lblShort: "Short",
+        lblEvenWeek: "Even Week",
+        lblOddWeek: "Odd Week",
+        secTracker: "Leave Tracker & Limits",
+        trackerNote: "If you set a value to 0, it won't be generated in the planner.",
+        trackerTitleLabel: "Page Title",
+        trackerVacationLabel: "Vacation",
+        trackerDoctorLabel: "Doctor",
+        trackerFamilyLabel: "Family Care",
+        trackerSick1Label: "Sick Days (1st Term)",
+        trackerSick2Label: "Sick Days (2nd Term)",
+        trackerNvLabel: "Comp Time (Title)",
+        trackerNvToggleLabel: "Show (0/1)",
+        lblCount: "Boxes",
+        lblTitle: "Title",
+        lblTodo: "To-Do",
+        lblNotes: "Notes",
+        lblPrep: "Lesson Prep"
+      },
+      presets: {
+        title: "Teacher's Planner",
+        todo: "To-Do List",
+        notes: "Notes",
+        prep: "Prep",
+        week: "Week",
+        evenWeek: "Even Week",
+        oddWeek: "Odd Week",
+        trackerTitle: "Absence & Leave Tracker",
+        vacation1: "Vacation",
+        vacation2: "Vacation",
+        doctor: "Doctor / Medical",
+        family: "Family Care",
+        sick1: "Sick Days (1st Term)",
+        sick2: "Sick Days (2nd Term)",
+        nv: "Comp Time (Hours)",
+        months: [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December"
+        ],
+        shortMonths: [
+          "JAN",
+          "FEB",
+          "MAR",
+          "APR",
+          "MAY",
+          "JUN",
+          "JUL",
+          "AUG",
+          "SEP",
+          "OCT",
+          "NOV",
+          "DEC"
+        ],
+        days: [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday"
+        ],
+        shortDays: [
+          "MON",
+          "TUE",
+          "WED",
+          "THU",
+          "FRI",
+          "SAT",
+          "SUN"
+        ]
+      }
     };
 
-    const presets = {
-      en: { title: "Teacher's Planner", todo: "To-Do List", notes: "Notes", prep: "Prep", week: "Week", evenWeek: "Even Week", oddWeek: "Odd Week", trackerTitle: "Absence & Leave Tracker", vacation1: "Vacation", vacation2: "Vacation", doctor: "Doctor / Medical", family: "Family Care", sick1: "Sick Days (1st Term)", sick2: "Sick Days (2nd Term)", nv: "Comp Time (Hours)", months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], shortMonths: ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"], days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], shortDays: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] },
-      sk: { title: "Učiteľský Plánovač", todo: "Úlohy", notes: "Poznámky", prep: "Príprava", week: "Týždeň", evenWeek: "Párny týždeň", oddWeek: "Nepárny týždeň", trackerTitle: "Prehľad voľna a absencií", vacation1: "Dovolenka", vacation2: "Dovolenka", doctor: "Lekár (Vlastný)", family: "Lekár (Sprievod) / OČR", sick1: "Sick Days (1. polrok)", sick2: "Sick Days (2. polrok)", nv: "Náhradné voľno (Záznam hodín)", months: ["Január", "Február", "Marec", "Apríl", "Máj", "Jún", "Júl", "August", "September", "Október", "November", "December"], shortMonths: ["JAN", "FEB", "MAR", "APR", "MÁJ", "JÚN", "JÚL", "AUG", "SEP", "OKT", "NOV", "DEC"], days: ["Pondelok", "Utorok", "Streda", "Štvrtok", "Piatok", "Sobota", "Nedeľa"], shortDays: ["PO", "UT", "ST", "ŠT", "PI", "SO", "NE"] }
+    const DEFAULT_FALLBACK_LANG = 'en';
+    const normalizeLanguageCode = (lang) => (lang || "").toLowerCase();
+    const isSafeLanguageCode = (code) => /^[A-Za-z0-9-]+$/.test(code);
+    const assertLanguageCode = (code, label) => {
+      if (!isSafeLanguageCode(code)) {
+        throw new Error(`Invalid ${label} language code '${code}'. Only letters, numbers, and hyphens are allowed.`);
+      }
+    };
+
+    const resolvePreferredLang = (languages, fallback) => {
+      const userLang = normalizeLanguageCode(navigator.language);
+      if (!userLang) {
+        return fallback || DEFAULT_FALLBACK_LANG;
+      }
+      const userBase = userLang.split("-")[0];
+      const matchLang = (code) => languages.find((lang) => normalizeLanguageCode(lang.code) === normalizeLanguageCode(code));
+      const exactMatch = matchLang(userLang);
+      if (exactMatch) return exactMatch.code;
+      const baseMatch = matchLang(userBase);
+      if (baseMatch) return baseMatch.code;
+      const fallbackMatch = matchLang(fallback);
+      if (fallbackMatch) return fallbackMatch.code;
+      if (languages[0]?.code) return languages[0].code;
+      return fallback || DEFAULT_FALLBACK_LANG;
+    };
+
+    const LanguagePicker = ({ languages, current, onChange, label }) => {
+      const [open, setOpen] = useState(false);
+      const containerRef = useRef(null);
+
+      useEffect(() => {
+        const handleClick = (event) => {
+          if (containerRef.current && !containerRef.current.contains(event.target)) {
+            setOpen(false);
+          }
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+      }, []);
+
+      const selected = languages.find((lang) => lang.code === current) || languages[0];
+      const selectedLabel = selected ? `${selected.flag ? `${selected.flag} ` : ""}${selected.label}` : current;
+
+      return (
+        <div ref={containerRef} className="relative">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500">{label}</span>
+            <button
+              type="button"
+              onClick={() => setOpen((prev) => !prev)}
+              title={selectedLabel}
+              aria-label={selectedLabel}
+              className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 transition"
+            >
+              <span title={selectedLabel} className="truncate max-w-[120px] sm:max-w-[160px]">{selectedLabel}</span>
+              <Icon name="chevron-down" className="w-4 h-4" />
+            </button>
+          </div>
+          {open && (
+            <div className="absolute right-0 mt-2 w-60 max-h-64 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg z-50">
+              {languages.map((lang) => {
+                const optionLabel = `${lang.flag ? `${lang.flag} ` : ""}${lang.label}`;
+                const isActive = lang.code === current;
+                return (
+                  <button
+                    key={lang.code}
+                    type="button"
+                    onClick={() => {
+                      onChange(lang.code);
+                      setOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm transition ${isActive ? "bg-slate-100 text-blue-600" : "text-slate-700 hover:bg-slate-50"}`}
+                  >
+                    {optionLabel}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
     };
 
     function App() {
       const [view, setView] = useState('settings');
       const [isDownloading, setIsDownloading] = useState(false);
-      const [appLang, setAppLang] = useState('en');
+      const isMountedRef = useRef(true);
+      const [languages, setLanguages] = useState([]);
+      const [appLang, setAppLang] = useState(DEFAULT_FALLBACK_LANG);
+      const [fallbackLang, setFallbackLang] = useState(DEFAULT_FALLBACK_LANG);
+      const [ui, setUi] = useState(FALLBACK_TRANSLATIONS.ui);
 
       const [config, setConfig] = useState({
-        orientation: 'landscape', startYear: new Date().getFullYear(), startMonth: 8, durationMonths: 10, periodsCount: 8, calendarTool: 'google', strings: presets.en,
+        orientation: 'landscape', startYear: new Date().getFullYear(), startMonth: 8, durationMonths: 10, periodsCount: 8, calendarTool: 'google', strings: FALLBACK_TRANSLATIONS.presets,
         trackerCounts: { vacation1: 45, vacation2: 45, doctor: 7, family: 7, sick1: 2, sick2: 2, nv: 1 } // nv is used just as a boolean toggle (0 or >0)
       });
 
-      useEffect(() => {
-        const userLang = navigator.language || navigator.userLanguage;
-        if (userLang && (userLang.startsWith('sk') || userLang.startsWith('cs'))) {
-          setAppLang('sk'); setConfig(prev => ({ ...prev, strings: presets.sk }));
-        }
+      const applyLanguage = useCallback((langCode, languageData, langMeta) => {
+        if (!isMountedRef.current) return;
+        setAppLang(langCode);
+        setUi(languageData.ui);
+        setConfig(prev => ({ ...prev, strings: languageData.presets }));
+        const dir = langMeta?.dir || 'ltr';
+        document.documentElement.lang = langCode;
+        document.documentElement.dir = dir;
       }, []);
 
-      const ui = dictionaries[appLang];
-      const changeAppLang = (lang) => { setAppLang(lang); setConfig(prev => ({ ...prev, strings: presets[lang] })); };
+      const loadLanguage = useCallback(async (langCode, availableLanguages, fallbackCode) => {
+        const requestedCode = langCode || fallbackCode || DEFAULT_FALLBACK_LANG;
+        const meta = availableLanguages.find((lang) => normalizeLanguageCode(lang.code) === normalizeLanguageCode(requestedCode));
+        const fileCode = meta?.code || requestedCode;
+        const normalizedFileCode = normalizeLanguageCode(fileCode);
+        const normalizedFallback = fallbackCode ? normalizeLanguageCode(fallbackCode) : null;
+        try {
+          assertLanguageCode(requestedCode, 'requested');
+          assertLanguageCode(fileCode, 'resolved');
+          const res = await fetch(`/strings/${fileCode}.json`);
+          if (!res.ok) throw new Error(`Failed to load language file ${fileCode}`);
+          const data = await res.json();
+          if (!data.ui || !data.presets) throw new Error(`Invalid language file ${fileCode}`);
+          applyLanguage(fileCode, data, meta);
+          return true;
+        } catch (err) {
+          console.error(`Failed to load language ${fileCode}`, err);
+          if (fallbackCode && normalizedFileCode !== normalizedFallback) {
+            return loadLanguage(fallbackCode, availableLanguages, null);
+          }
+          if (normalizedFileCode !== DEFAULT_FALLBACK_LANG) {
+            return loadLanguage(DEFAULT_FALLBACK_LANG, availableLanguages, null);
+          }
+          return false;
+        }
+      }, [applyLanguage]);
+
+      useEffect(() => {
+        isMountedRef.current = true;
+        const loadIndex = async () => {
+          try {
+            const res = await fetch('/strings/index.json');
+            if (!res.ok) throw new Error('Failed to load language index');
+            const data = await res.json();
+            if (!isMountedRef.current) return;
+            const available = Array.isArray(data.languages) ? data.languages : [];
+            const defaultLang = data.default || DEFAULT_FALLBACK_LANG;
+            setFallbackLang(defaultLang);
+            setLanguages(available);
+            const preferred = resolvePreferredLang(available, defaultLang);
+            await loadLanguage(preferred, available, defaultLang);
+          } catch (err) {
+            console.error('Failed to load language index', err);
+            if (!isMountedRef.current) return;
+            const fallbackList = [{ code: DEFAULT_FALLBACK_LANG, label: 'English', dir: 'ltr' }];
+            setFallbackLang(DEFAULT_FALLBACK_LANG);
+            setLanguages(fallbackList);
+            await loadLanguage(DEFAULT_FALLBACK_LANG, fallbackList, DEFAULT_FALLBACK_LANG);
+          }
+        };
+        loadIndex();
+        return () => {
+          isMountedRef.current = false;
+        };
+      }, [loadLanguage]);
+
+      const changeAppLang = (lang) => {
+        loadLanguage(lang, languages, fallbackLang);
+      };
 
       const handleDownloadPdf = async () => {
         setIsDownloading(true);
@@ -186,7 +454,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config)
           });
-          if (!res.ok) throw new Error("Chyba servera - Skontrolujte logy Dockeru");
+          if (!res.ok) throw new Error(ui.serverError);
           const blob = await res.blob();
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -194,7 +462,7 @@
           a.download = `${config.strings.title.replace(/\s+/g, '_')}.pdf`;
           a.click();
         } catch (err) {
-          alert("Nepodarilo sa vygenerovať PDF: " + err.message);
+          alert(`${ui.pdfError}${err.message}`);
         } finally {
           setIsDownloading(false);
         }
@@ -209,17 +477,21 @@
                 <h1 className="font-bold text-lg tracking-tight">{ui.appTitle}</h1>
               </div>
               <div className="flex gap-3 items-center">
-                {view === 'settings' && (
-                  <div className="flex items-center gap-2 mr-6 bg-slate-100 p-1 rounded-lg">
-                    <button onClick={() => changeAppLang('en')} className={`px-3 py-1 rounded-md text-xs font-bold transition ${appLang === 'en' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>EN</button>
-                    <button onClick={() => changeAppLang('sk')} className={`px-3 py-1 rounded-md text-xs font-bold transition ${appLang === 'sk' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>SK</button>
+                {view === 'settings' && languages.length > 0 && (
+                  <div className="mr-6">
+                    <LanguagePicker
+                      languages={languages}
+                      current={appLang}
+                      onChange={changeAppLang}
+                      label={ui.langToggleMsg}
+                    />
                   </div>
                 )}
                 {view === 'preview' && (<button onClick={() => setView('settings')} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"><Icon name="settings" className="w-4 h-4" /> {ui.btnSettings}</button>)}
                 {view === 'settings' && (<button onClick={() => setView('preview')} className="flex items-center gap-2 px-6 py-2 bg-slate-200 text-slate-800 text-sm font-bold rounded-xl hover:bg-slate-300 transition"><Icon name="eye" className="w-4 h-4" /> {ui.btnGenerate}</button>)}
                 <button onClick={handleDownloadPdf} disabled={isDownloading} className={`flex items-center gap-2 px-6 py-2 text-white text-sm font-bold rounded-xl transition shadow-md ${isDownloading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>
                   <Icon name={isDownloading ? "loader-2" : "download"} className={`w-4 h-4 ${isDownloading ? 'animate-spin' : ''}`} />
-                  {isDownloading ? "Generujem PDF..." : ui.btnSave}
+                  {isDownloading ? ui.btnGenerating : ui.btnSave}
                 </button>
               </div>
             </div>
@@ -265,38 +537,38 @@
             {/* SETTINGS PRE TRACKER */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <h3 className="text-lg font-bold mb-2">{ui.secTracker}</h3>
-              <p className="text-xs text-slate-500 mb-4">Ak pre položku nastavíte hodnotu 0, nevygeneruje sa v diári.</p>
+              <p className="text-xs text-slate-500 mb-4">{ui.trackerNote}</p>
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Nadpis Strany</label><input type="text" value={config.strings.trackerTitle} onChange={e => uS('trackerTitle', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerTitleLabel}</label><input type="text" value={config.strings.trackerTitle} onChange={e => uS('trackerTitle', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Dovolenka ({config.startYear})</label><input type="text" value={config.strings.vacation1} onChange={e => uS('vacation1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerVacationLabel} ({config.startYear})</label><input type="text" value={config.strings.vacation1} onChange={e => uS('vacation1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                   <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.vacation1} onChange={e => uTC('vacation1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Dovolenka ({config.startYear + 1})</label><input type="text" value={config.strings.vacation2} onChange={e => uS('vacation2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerVacationLabel} ({config.startYear + 1})</label><input type="text" value={config.strings.vacation2} onChange={e => uS('vacation2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                   <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.vacation2} onChange={e => uTC('vacation2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Lekár</label><input type="text" value={config.strings.doctor} onChange={e => uS('doctor', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerDoctorLabel}</label><input type="text" value={config.strings.doctor} onChange={e => uS('doctor', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                   <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.doctor} onChange={e => uTC('doctor', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">OČR</label><input type="text" value={config.strings.family} onChange={e => uS('family', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerFamilyLabel}</label><input type="text" value={config.strings.family} onChange={e => uS('family', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                   <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.family} onChange={e => uTC('family', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Sick Days (1. Polrok)</label><input type="text" value={config.strings.sick1} onChange={e => uS('sick1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerSick1Label}</label><input type="text" value={config.strings.sick1} onChange={e => uS('sick1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                   <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.sick1} onChange={e => uTC('sick1', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Sick Days (2. Polrok)</label><input type="text" value={config.strings.sick2} onChange={e => uS('sick2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerSick2Label}</label><input type="text" value={config.strings.sick2} onChange={e => uS('sick2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
                   <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblCount}</label><input type="number" value={config.trackerCounts.sick2} onChange={e => uTC('sick2', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
                 <div className="flex gap-2 items-end">
-                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">Náhradné voľno (Nadpis)</label><input type="text" value={config.strings.nv} onChange={e => uS('nv', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
-                  <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">Zobraziť (0/1)</label><input type="number" value={config.trackerCounts.nv} onChange={e => uTC('nv', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
+                  <div className="flex-1"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerNvLabel}</label><input type="text" value={config.strings.nv} onChange={e => uS('nv', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+                  <div className="w-20"><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.trackerNvToggleLabel}</label><input type="number" value={config.trackerCounts.nv} onChange={e => uTC('nv', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1 text-center font-bold" /></div>
                 </div>
               </div>
             </div>
@@ -304,18 +576,24 @@
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
             <h3 className="text-2xl font-bold mb-4">{ui.secStrings}</h3>
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">Title</label><input type="text" value={config.strings.title} onChange={e => uS('title', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
-              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">To-Do</label><input type="text" value={config.strings.todo} onChange={e => uS('todo', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
-              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">Notes</label><input type="text" value={config.strings.notes} onChange={e => uS('notes', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
-              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">Lesson Prep</label><input type="text" value={config.strings.prep} onChange={e => uS('prep', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblTitle}</label><input type="text" value={config.strings.title} onChange={e => uS('title', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblTodo}</label><input type="text" value={config.strings.todo} onChange={e => uS('todo', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblNotes}</label><input type="text" value={config.strings.notes} onChange={e => uS('notes', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
+              <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblPrep}</label><input type="text" value={config.strings.prep} onChange={e => uS('prep', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
 
               <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblEvenWeek}</label><input type="text" value={config.strings.evenWeek} onChange={e => uS('evenWeek', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
               <div><label className="block text-[10px] font-bold text-slate-400 uppercase">{ui.lblOddWeek}</label><input type="text" value={config.strings.oddWeek} onChange={e => uS('oddWeek', e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg mt-1" /></div>
             </div>
-            <h4 className="text-sm font-bold mb-2">Mesiace</h4>
+            <h4 className="text-sm font-bold mb-2">{ui.subMonths}</h4>
             <div className="grid grid-cols-2 gap-2">
               {config.strings.months.map((m, i) => (
                 <div key={i} className="flex gap-2"><input type="text" value={m} onChange={e => uA('months', i, e.target.value)} className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" /><input type="text" value={config.strings.shortMonths[i]} onChange={e => uA('shortMonths', i, e.target.value)} className="w-16 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center" /></div>
+              ))}
+            </div>
+            <h4 className="text-sm font-bold mt-6 mb-2">{ui.subDays}</h4>
+            <div className="grid grid-cols-2 gap-2">
+              {config.strings.days.map((d, i) => (
+                <div key={i} className="flex gap-2"><input type="text" value={d} onChange={e => uA('days', i, e.target.value)} className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs" /><input type="text" value={config.strings.shortDays[i]} onChange={e => uA('shortDays', i, e.target.value)} className="w-16 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center" /></div>
               ))}
             </div>
           </div>
